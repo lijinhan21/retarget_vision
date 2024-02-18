@@ -1,0 +1,18 @@
+
+# Encode feature configs
+feature_encoder:
+  model_name: "dinov2"
+  kwargs:
+    {}
+
+# Hierarchical clustering configs
+hierarchical_clustering:
+  distance_metric: "cos"
+  footprint_mode: "global_pooling"
+  shortest_len: 10
+
+# temporal segmentation configs
+temporal_segmentation:
+  min_seg_num: 3
+  min_len: 40
+  sorted: true
