@@ -115,6 +115,8 @@ annotaitons/
             tracked_points.pt  # tracked tracks and visibility information
             # changepoint detection result
             tap_temporal_segments.pt
+            # HaMeR result
+            hammer_output/hand_keypoints.pt
 
             # Visualization purpose
 
@@ -131,4 +133,8 @@ annotaitons/
 Then use the following jupyter notebook to visualize the result `visualize_data.ipynb`. 
 
 
+### Visualize everything together
+Play with `visualization_example.ipynb` in the parent folder.
+
 ## 3. Real Robot Rollout
+TODO
