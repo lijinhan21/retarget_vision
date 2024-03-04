@@ -104,30 +104,22 @@ The annotation folder should look like this:
 annotaitons/
     human_demo/
         DATASET_Name/
-            # first frame of the video
-            frame.jpg
-            # first frame segmentaiton annotation from Grounded-SAM
-            frame_annotation.png
-            # XMem annotation result
-            masks.npz
+            frame.jpg             # first frame of the video
+            frame_annotation.png  # first frame segmentaiton annotation from Grounded-SAM
+            masks.npz             # XMem annotation result
+
             # TAP annotation result
             points.pt          # sampled keypoints
             tracked_points.pt  # tracked tracks and visibility information
-            # changepoint detection result
-            tap_temporal_segments.pt
-            # HaMeR result
-            hammer_output/hand_keypoints.pt
+
+            tap_temporal_segments.pt         # changepoint detection result
+            hammer_output/hand_keypoints.pt  # HaMeR result
 
             # Visualization purpose
-
-            # XMem annotation video
-            xmem_annotation_video.mp4
-            # TAP annotation video  
-            cotracker/video.mp4
-            # changepoint detection visualization
-            tap_segmentation.mp4
-            # hamer visualization
-            hamer_recon.mp4
+            xmem_annotation_video.mp4 # XMem annotation video
+            cotracker/video.mp4       # TAP annotation video
+            tap_segmentation.mp4      # changepoint detection visualization
+            hamer_recon.mp4           # hamer visualization
 ```
 
 Then use the following jupyter notebook to visualize the result `visualize_data.ipynb`. 
