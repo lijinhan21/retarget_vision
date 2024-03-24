@@ -8,16 +8,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 from orion.utils.misc_utils import get_intrinsics_matrix_from_dict, get_extrinsics_matrix_from_dict, load_first_frame_from_human_hdf5_dataset, Timer
-# try:
-#     from robosuite.utils.camera_utils import get_real_depth_map, get_camera_intrinsic_matrix, get_camera_extrinsic_matrix
-#     from robomimic.utils.obs_utils import Modality
 
-#     import robosuite.utils.transform_utils as T
-#     import robosuite.macros as macros
-#     from kaede_utils.robosuite_utils.xml_utils import postprocess_model_xml, get_camera_info_from_xml
-#     from groot_imitation.groot_algo.env_wrapper import rotate_camera
-# except:
-#     pass
+from orion.utils.log_utils import get_orion_logger
+
+ORION_LOGGER = get_orion_logger("orion")
 
 def convert_convention(image, real_robot=True):
     if not real_robot:
@@ -75,7 +69,7 @@ class O3DPointCloud():
         y = int(y)
         new_depth = depth.copy()
         binary_mask = np.zeros_like(depth)
-        print(x, y)
+        ORION_LOGGER.debug(f"Selected pixel: {x}, {y}")
         binary_mask[x-region_size:x+region_size, y-region_size:y+region_size] = 1
         new_depth = new_depth * binary_mask
         self.create_from_rgbd(color, new_depth, intrinsic_matrix, convert_rgb_to_intensity=convert_rgb_to_intensity)
@@ -164,8 +158,8 @@ class O3DPointCloud():
         plane_model, inliers = pcd.segment_plane(distance_threshold=distance_threshold, ransac_n=ransac_n, num_iterations=num_iterations)
         [a, b, c, d] = plane_model
         if verbose:
-            print("Plane equation: {:.2f}x + {:.2f}y + {:.2f}z + {:.2f} = 0".format(a, b, c, d))
-            print("Number of inliers: {}".format(len(inliers)))
+            ORION_LOGGER.info("Plane equation: {:.2f}x + {:.2f}y + {:.2f}z + {:.2f} = 0".format(a, b, c, d))
+            ORION_LOGGER.info("Number of inliers: {}".format(len(inliers)))
         inlier_cloud = pcd.select_by_index(inliers)
         outlier_cloud = pcd.select_by_index(inliers, invert=True)
         return {
@@ -252,7 +246,7 @@ def estimate_rotation(plane_model, z_up=True):
     cos_theta = np.dot(n, k) / np.linalg.norm(n)
     theta = np.arccos(cos_theta)
     # theta = 2.1
-    print(theta)
+    ORION_LOGGER.debug(theta)
 
     # Rodrigues' rotation formula
     # Skew-symmetric matrix of axis

@@ -60,6 +60,10 @@ from orion.utils.hand_utils import (
     InteractionAffordance,
 )
 
+from orion.utils.log_utils import get_orion_logger
+
+ORION_LOGGER = get_orion_logger("orion")
+
 class OOGMode(Enum):
     NULL = 0
     FREE_MOTION = 1
@@ -85,7 +89,7 @@ class SimpleEEFNode(Node):
 
     def get_eef_action(self, verbose=False):
         if verbose:
-            print("Current eef action is: {}".format(self.action))
+            ORION_LOGGER.debug("Current eef action is: {}".format(self.action))
         return self.action
 
     def set_thumb_index_distances(self, distances):
@@ -504,8 +508,7 @@ class OpenWorldObjectSceneGraph():
             self.set_camera_extrinsics(T_xy_plane_align)
 
             if self.debug_mode:
-                print("Estimated transformation matrix is: ")
-                print(T_xy_plane_align)
+                ORION_LOGGER.debug(f"Estimated transformation matrix is: {T_xy_plane_align}")
         else:
             self.set_camera_extrinsics(previous_graph.camera_extrinsics)
 
@@ -522,7 +525,7 @@ class OpenWorldObjectSceneGraph():
         visibility = visibility[:, segment_start_idx:segment_end_idx]
 
         if self.debug_mode:
-            print("Pixel traj shape: ", pixel_trajs.shape)
+            ORION_LOGGER.debug(f"Pixel traj shape: {pixel_trajs.shape}")
         # compute tap trajectories in 3D space
         world_trajs = self.compute_world_trajs(pixel_trajs, depth_seg_seq, self.camera_intrinsics, self.camera_extrinsics)
         self.set_pixel_trajs(pixel_trajs)
@@ -649,15 +652,15 @@ class OpenWorldObjectSceneGraph():
 
         row_ind, col_ind = linear_sum_assignment(hungarian_matrix, maximize=True)
         if verbose:
-            print("col ind: ", col_ind)
-            print("The unique set of indices are: ", np.unique(new_current_annotation_mask))
+            ORION_LOGGER.debug(f"col ind: {col_ind}")
+            ORION_LOGGER.debug("The unique set of indices are: {}".format(np.unique(new_current_annotation_mask)))
         for i in range(len(col_ind)):
             if verbose:
-                print(col_ind[i], ": ", row_ind[i])
+                ORION_LOGGER.info(f"{col_ind[i]}: {rol_ind[i]}")
             hungarian_matched_annotation_mask[np.where(input_annotation == col_ind[i] + 1)] = row_ind[i] + 1
         self.input_annotation = hungarian_matched_annotation_mask
         for i in range(hungarian_matched_annotation_mask.max() + 1):
-            print("new mask: ", i, ": ", np.sum(hungarian_matched_annotation_mask == i))
+            ORION_LOGGER.debug("new mask: {} : {}".format(i, np.sum(hungarian_matched_annotation_mask == i)))
 
         # The annotation, however, might be wrong due to rough thresholding. We will use spatial correspondence to further correct the annotation
 
@@ -684,7 +687,7 @@ class OpenWorldObjectSceneGraph():
              for point in points_dict[object_id]:
                 if self.input_annotation[point[1], point[0]] != 0:
                     new_mapping_votes[object_id].append(self.input_annotation[point[1], point[0]])
-        print("Before filtering: ", new_mapping_votes)
+        ORION_LOGGER.debug("Before filtering: {}".format(new_mapping_votes))
         
         new_annotation = np.zeros_like(self.input_annotation)
 
@@ -703,7 +706,7 @@ class OpenWorldObjectSceneGraph():
                             new_mapping_votes[object_id_2] = [item for item in new_mapping_votes[object_id_2] if item != duplicate_element]
                         else:
                             new_mapping_votes[object_id_1] = [item for item in new_mapping_votes[object_id_1] if item != duplicate_element]
-        print("After filtering: ", new_mapping_votes)
+        ORION_LOGGER.debug("After filtering: {}".format(new_mapping_votes))
         for object_id in new_mapping_votes:
             original_id = find_most_repeated_number(new_mapping_votes[object_id])
             new_annotation[np.where(self.input_annotation==original_id)] = object_id
@@ -837,10 +840,11 @@ class OpenWorldObjectSceneGraph():
             all_keypoints = all_keypoints[:, :select_subset]
             if use_visibility:
                 all_visibilities = all_visibilities[:, :select_subset]
-        print("Optimization array shape:")
-        print("Keypoint shape: ", all_keypoints.shape)
+
+        ORION_LOGGER.debug("Optimization array shape:")
+        ORION_LOGGER.debug(f"Keypoint shape: {all_keypoints.shape}")
         if use_visibility:
-            print("Visibility shape: ", all_visibilities.shape)
+            ORION_LOGGER.debug(f"Visibility shape: {all_visibilities.shape}")
         # if mode == "simple":
         #     bundle_optimization = optim_utils.SimpleBundleOptimization()
         #     optimized_transforms = bundle_optimization.optimize(all_keypoints, all_visibilities, optim_kwargs)
@@ -875,7 +879,7 @@ class OpenWorldObjectSceneGraph():
                     final_best_loss = best_loss
                     final_optimized_transforms = optimized_transforms
                     final_optimized_translation = optimized_translation
-                print("Loss larger than threshold. Retrying ... ")
+                ORION_LOGGER.warning("Loss larger than threshold. Retrying ... ")
         if final_optimized_transforms is not None:
             optimized_transforms = final_optimized_transforms
             optimized_translation = final_optimized_translation
@@ -890,7 +894,7 @@ class OpenWorldObjectSceneGraph():
         assert(mode in ["object", "point", "all"]), "mode must be either `object`, `point` or `all`"
 
         if mode == "object":
-            print("Plotting object overlay")
+            ORION_LOGGER.debug("Plotting object overlay")
             overlay_image = overlay_xmem_mask_on_image(
                 self.input_image, 
                 self.input_annotation,
@@ -902,7 +906,7 @@ class OpenWorldObjectSceneGraph():
                 width=width, 
                 height=height)
         elif mode == "point":
-            print("Plotting point overlay")
+            ORION_LOGGER.debug("Plotting point overlay")
             
             plotly_draw_image_with_object_keypoints(
                 self.input_image, 
@@ -911,7 +915,7 @@ class OpenWorldObjectSceneGraph():
                 height=height,
                 default_point_color=default_point_color)
         elif mode == "all":
-            print("Plotting all overlay")
+            ORION_LOGGER.debug("Plotting all overlay")
             overlay_image = overlay_xmem_mask_on_image(
                 self.input_image, 
                 self.input_annotation,
@@ -1053,7 +1057,7 @@ class OpenWorldObjectSceneGraph():
 
         pcd_points, pcd_colors = self.get_objects_3d_points(object_id=object_id, downsample=downsample)
         if draw_trajs and draw_keypoints:
-            print("Warning: draw_trajs and draw_keypoints are both True, only draw_trajs will be used")
+            ORION_LOGGER.warning("draw_trajs and draw_keypoints are both True, only draw_trajs will be used")
 
         marker_size = 3
         if draw_trajs:
@@ -1065,7 +1069,7 @@ class OpenWorldObjectSceneGraph():
                 object_ids = self.object_ids if object_id is None else [object_id]
                 additional_points = self.get_points_by_objects(object_ids=object_ids, mode="world")
                 additional_points = np.squeeze(np.array(additional_points)).reshape(len(object_ids), -1, 3)
-                print(additional_points.shape)
+                ORION_LOGGER.debug(f"Additional points shape: {additional_points.shape}")
             marker_size = 10
         
         plotly_draw_3d_pcd(pcd_points, pcd_colors, addition_points=additional_points, marker_size=marker_size, no_background=no_background, additional_point_draw_lines=additional_point_draw_lines, default_rgb_str=keypoints_rgb_str, uniform_color=uniform_color)
@@ -1095,7 +1099,7 @@ class OpenWorldObjectSceneGraph():
         pcd_points = np.concatenate(pcd_points_list, axis=0)
         pcd_colors = np.concatenate(pcd_colors_list, axis=0)
         if draw_trajs and draw_keypoints:
-            print("Warning: draw_trajs and draw_keypoints are both True, only draw_trajs will be used")
+            ORION_LOGGER.warning("draw_trajs and draw_keypoints are both True, only draw_trajs will be used")
 
         marker_size = 3
         if draw_trajs:
@@ -1107,7 +1111,7 @@ class OpenWorldObjectSceneGraph():
                 object_ids = self.object_ids if object_id is None else [object_id]
                 additional_points = self.get_points_by_objects(object_ids=object_ids, mode="world")
                 additional_points = np.squeeze(np.array(additional_points)).reshape(len(object_ids), -1, 3)
-                print(additional_points.shape)
+                ORION_LOGGER.debug(f"Additional points shape: {additional_points.shape}")
             marker_size = 10
         
         plotly_draw_3d_pcd(pcd_points, pcd_colors, addition_points=additional_points, marker_size=marker_size, no_background=no_background, additional_point_draw_lines=additional_point_draw_lines, default_rgb_str=keypoints_rgb_str, uniform_color=uniform_color)

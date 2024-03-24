@@ -23,11 +23,14 @@ import signal
 from PIL import Image
 from scipy.ndimage import binary_erosion
 from third_party.XMem.util.palette import davis_palette
+from orion.utils.log_utils import get_orion_logger
+
+ORION_LOGGER = get_orion_logger("orion")
 
 try:
     import robosuite.macros as macros
 except:
-    print("Warning: robosuite is not installed. Macros will not be available.")
+    ORION_LOGGER.warning("Warning: robosuite is not installed. Macros will not be available.")
 
 def get_annotation_path(dataset_name, parent_folder="datasets/annotations"):
     dataset_folder_name = dataset_name.split("/")[-1].replace(".hdf5", "")
@@ -513,7 +516,7 @@ def plotly_draw_image_correspondences(image1, points1, image2, points2, max_widt
     height1, width1 = image1.shape[:2]
     height2, width2 = image2.shape[:2]
 
-    print(height1, width1, height2, width2)
+    ORION_LOGGER.debug(f"first image size: {height1} x {width1}, second image size: {height2} x {width2}")
 
     # Create a blank canvas
     max_height = max(height1, height2)
@@ -735,11 +738,7 @@ def edit_h5py_datasets(base_dataset_name, additional_dataset_name, mode="merge  
         # merge mode
         if mode == "merge":
             for demo in base_dataset["data"].keys():
-                # print(demo)
                 for key in additional_dataset[f"data/{demo}/obs"].keys():
-                    # if key in base_dataset[f"data/{demo}/obs"].keys():
-                    #     print("Warning")
-                    #     continue
                     assert(key not in base_dataset[f"data/{demo}/obs"].keys()), f"Key {key} already exists in the base dataset."
                     additional_dataset.copy(additional_dataset[f"data/{demo}/obs/{key}"], base_dataset[f"data/{demo}/obs"], key)
 
@@ -750,7 +749,7 @@ def edit_h5py_datasets(base_dataset_name, additional_dataset_name, mode="merge  
                     assert(key in base_dataset[f"data/{demo}/obs"].keys()), f"Key {key} does not exist in the base dataset."
                     del base_dataset[f"data/{demo}/obs/{key}"]
     except Exception as e:
-        print(e)
+        ORION_LOGGER.error(e)
         base_dataset.close()
         additional_dataset.close()
         raise e
@@ -838,7 +837,7 @@ class VideoWriter():
                     for im in self.image_buffer[idx]:
                         video_writer.append_data(im[::img_convention, :, ::color_convention])
                     video_writer.close()
-            print(f"Saved videos to {video_name}.")
+            ORION_LOGGER.info(f"Saved videos to {video_name}.")
         return video_name
 
 
@@ -867,7 +866,7 @@ class Timer:
         end_time = time.time_ns()
         elapsed_time = (end_time - self.start_time) / self.factor
         if self.verbose:
-            print(f"{elapsed_time} seconds to execute in the block of {self.filename}: {self.line_number}.")
+            ORION_LOGGER.info(f"{elapsed_time} seconds to execute in the block of {self.filename}: {self.line_number}.")
 
         self.value = elapsed_time
 
@@ -1187,7 +1186,6 @@ def read_from_runtime_file():
     result_mapping = cfg["result_mapping"]
 
     runtime_config = load_from_runtime_config()
-    # print(runtime_config)
     runtime_folder = runtime_config["runtime_folder"]
 
     task_id = runtime_folder.split("/")[-3]
@@ -1215,4 +1213,4 @@ def finish_experiments(runtime_folder, rollout_folder, human_video_annotation_fo
         json.dump({"human_video_annotation_folder": human_video_annotation_folder,
                      "rollout_folder": rollout_folder,
                    }, f)
-    print(f"Writing {runtime_folder}/info.json")
+    ORION_LOGGER.info(f"Writing {runtime_folder}/info.json")
