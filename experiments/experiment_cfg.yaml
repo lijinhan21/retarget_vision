@@ -1,26 +1,24 @@
 task_mapping:
    "🍵 Put a mug on a coaster": "task1"
    "🚤 Simple assembly of a boat": "task2"
-   "🍟 Put a chip bag on a plate": "task4"
-   "🍵📦 Mug on a coaster, box on a plate": "task6"
-   "🚤🚤 22 Complex assembly of a boat": "task8"   
+   "🍟 Put a chip bag on a plate": "task3"
+   "🍵📦 Mug on a coaster, box on a plate": "task4"
+   "🚤🚤 22 Complex assembly of a boat": "task5"   
 
 demo_mapping:
   "task1": "iphone_pick_place_blue_mug_1_demo"
   "task2": "iphone_front_boat_demo"  
-  "task4": "iphone_place_chip_bag_on_plate_1_demo"
-  "task6": "long_horizon_rearrangement_cheese_4_demo"
-  "task8": "iphone_long_horizon_boat_18_demo"
+  "task3": "iphone_place_chip_bag_on_plate_1_demo"
+  "task4": "long_horizon_rearrangement_cheese_4_demo"
+  "task5": "iphone_long_horizon_boat_18_demo"
 
 
 task_id_mapping:
     "task1": "put_mug_on_coaster"
     "task2": "simple_boat_assembly"
-    "task3": "spoon_in_bowl"
-    "task4": "chip_bag_on_plate"
-    "task5": "minecraft_tree_grass"
-    "task6": "mug_coaster_box_plate"
-    "task8": "complex_boat_assembly_2"
+    "task3": "chip_bag_on_plate"
+    "task4": "mug_coaster_box_plate"
+    "task5": "complex_boat_assembly_2"
 
 model_mapping:
     "ORION (Ours)": "orion"

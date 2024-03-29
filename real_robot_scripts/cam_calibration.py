@@ -25,11 +25,11 @@ from deoxys_vision.experimental.calibration import EyeInHandCalibration, EyeToHa
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--config-folder",
-        type=str,
-        default=os.path.expanduser("~/.deoxys_vision/calibration_configuration"),
-    )
+    # parser.add_argument(
+    #     "--config-folder",
+    #     type=str,
+    #     default=os.path.expanduser("~/.deoxys_vision/calibration_configuration"),
+    # )
 
     parser.add_argument(
         "--result-folder",
@@ -60,7 +60,9 @@ def main():
 
 
     # load a list of joints to move
-    joints_json_file_name = f"{args.config_folder}/{args.config_filename}"
+    # joints_json_file_name = f"{args.config_folder}/{args.config_filename}"
+    config_folder = os.path.dirname(args.config_filename)
+    joints_json_file_name = args.config_filename
 
     joint_info = json.load(open(joints_json_file_name, "r"))
     joint_list = joint_info["joints"]
@@ -126,7 +128,7 @@ def main():
             time.sleep(0.3)
 
         with open(
-            os.path.join(args.config_folder, f"{camera_info.camera_name}.json"),
+            os.path.join(config_folder, f"{camera_info.camera_name}.json"),
             "w",
         ) as f:
             json.dump(intrinsics, f)
@@ -144,7 +146,7 @@ def main():
         tag_size = 0.05931
 
     with open(
-        os.path.join(args.config_folder, f"{camera_info.camera_name}.json"), "r"
+        os.path.join(config_folder, f"{camera_info.camera_name}.json"), "r"
     ) as f:
         intrinsics = json.load(f)
 

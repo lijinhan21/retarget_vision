@@ -656,7 +656,7 @@ class OpenWorldObjectSceneGraph():
             ORION_LOGGER.debug("The unique set of indices are: {}".format(np.unique(new_current_annotation_mask)))
         for i in range(len(col_ind)):
             if verbose:
-                ORION_LOGGER.info(f"{col_ind[i]}: {rol_ind[i]}")
+                ORION_LOGGER.info(f"{col_ind[i]}: {row_ind[i]}")
             hungarian_matched_annotation_mask[np.where(input_annotation == col_ind[i] + 1)] = row_ind[i] + 1
         self.input_annotation = hungarian_matched_annotation_mask
         for i in range(hungarian_matched_annotation_mask.max() + 1):

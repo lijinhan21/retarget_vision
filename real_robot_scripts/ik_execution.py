@@ -230,7 +230,7 @@ def ik_execution(args, image_capturer: ImageCapturer):
     joint_seq, new_T_seq, quat_seq = ik_wrapper.ik_trajectory_from_R_t_seq(R_seq, t_seq, reset_joint_positions)
     # joint_seq = ik_wrapper.ik_trajectory_to_target_position(np.array([0.4, 0.2, 0.2]), reset_joint_positions)
 
-    joint_seq = ik_wrapper.interpolate_dense_traj(joint_seq)
+    joint_seq = ik_wrapper.interpolate_dense_traj(joint_seq, minimal_displacement=0.01)
     joint_seq = np.array(joint_seq)
 
     # record_images = []
