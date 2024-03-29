@@ -130,3 +130,12 @@ Play with `visualization_example.ipynb` in the parent folder.
 
 ## 3. Real Robot Rollout
 TODO
+
+### Camera Calibration
+
+
+### Run Camera
+
+```
+python real_robot_scripts/cam_streaming.py --camera-ref rs_0 --use-rgb --use-depth --eval --use-rec --visualization
+```
