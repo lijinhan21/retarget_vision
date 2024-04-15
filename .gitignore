@@ -1,3 +1,8 @@
 *~
 *.pyc
 __pycache__
+third_party
+datasets
+annotations
+.ipynb_checkpoints
+*.zip

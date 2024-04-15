@@ -124,7 +124,7 @@ class XMemTracker:
     @torch.no_grad()
     def clear_memory(self):
         self.tracker.clear_memory()
-        self.mapper.clear_labels()
+        # self.mapper.clear_labels()
         torch.cuda.empty_cache()
 
     def track_video(self, video_frames, initial_mask):
