@@ -28,6 +28,7 @@ from deoxys_vision.utils.img_utils import save_depth_in_rgb
 
 
 from real_robot_scripts.ik_execution import ik_execution
+from real_robot_scripts.rollout_tracking import RolloutTracker
 
 logger = get_orion_logger(__name__)
 
@@ -69,6 +70,7 @@ def main():
                                     target_intersection_threshold=target_intersection_threshold)
 
     # Algorithm starts
+    rollout_tracker = RolloutTracker()
     while not is_finished:
         tmp_annotation_path = os.path.join(runtime_folder, "tmp_annotation.png")
 
@@ -235,24 +237,6 @@ def main():
 
         new_demo_object_2_pcd_points = transform_point_clouds(subgoal_transform, demo_object_2_pcd_points + reference_offset)
 
-        # pcd = np.concatenate((
-        #     object_1_pcd_points,
-        #     object_1_new_points, 
-        #     new_demo_object_1_pcd_points,
-        #     object_2_pcd_points,
-        #     new_demo_object_2_pcd_points,
-        #     ), axis=0)
-        # colors = np.concatenate((
-        #     object_1_pcd_colors, 
-        #     object_1_pcd_colors[..., [1, 0, 2]], 
-        #     demo_object_1_pcd_colors[..., [1, 2, 0]] / 2,
-        #     object_2_pcd_colors,
-        #     demo_object_2_pcd_colors[..., ::-1],
-        #     ), axis=0)
-
-        # plotly_fig = plotly_draw_3d_pcd(pcd, colors, addition_points=interaction_points, marker_size=15)
-        # plotly_offline_visualization([plotly_fig], "runtime_visualization.html")
-
         runtime_T_file = os.path.join(robot_video_annotation_path, f"T_{matched_graph_idx}_seq.pt")
         torch.save({"R_seq": R_seq, "t_seq": t_seq, 
                     "target_object_centroid": object_1_pcd_points.mean(axis=0),
@@ -265,6 +249,8 @@ def main():
             json.dump({"file": runtime_T_file}, f)
         # Execute motion trajectories
         ik_execution(args, image_capturer)
+        # annotate rollout video
+        rollout_tracker.run()
 
 
 

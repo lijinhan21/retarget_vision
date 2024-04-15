@@ -1,6 +1,6 @@
 cd third_party
 
-# git clone git@github.com:hkchengrex/XMem.git
+git clone git@github.com:hkchengrex/XMem.git
 
 cd XMem
 

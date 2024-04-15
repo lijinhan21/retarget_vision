@@ -2,6 +2,13 @@
 
 ## 1. Installation
 
+### Create a python environment
+```
+conda create --name orion python=3.9
+```
+
+Then first install the latest torch in this virtual environment before you proceed. This is to make sure `torch` can correctly installed with cuda enabled. Note that you should create a separate virtualenv in order to run HaMeR.
+
 ### Install DINOv2, SAM, XMem, Cotracker
 1. Run `./setup_vision_models.sh` to install the following packages:
     - DINOv2
@@ -17,17 +24,32 @@ Then, in order to run the model in our repo, we need to modify the path of some 
 ln -n -s third_party/hamer/_DATA ./
 ```
 
+Also, change line 14 of `hamer/vitpose_model.py` to the following:
+```
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+```
+
 Note that it's recommended to use a separate conda environment to run the HaMeR code. There are some package version conflicts that make it difficult to run HaMeR in the same environment as the rest of the code. Luckily, this part is only for offline processing, so it's won't affect workflow at test time. 
+
+
 
 
 ### Install Grounded-SAM
 
 Git clone [Grounded-SAM](https://github.com/IDEA-Research/GroundingDINO) under `third_party`, and follow its instructions.
 
-If you want to use the grounded-sam with GPU, thigns might not be installed correctly following the website. One possible solution is to run the following commands separately:
+If you want to use the grounded-sam with GPU, things might not be installed correctly following the website. One possible solution is to run the following commands separately:
 ```
 python setup.py build
 python setup.py install
+```
+
+### Install Lietorch
+
+You can install the following anywhere, as long as you install it into the `orion` virtual environment.
+```
+git clone git@github.com:princeton-vl/lietorch.git
+
 ```
 
 ### Directory structure of `third_party`
@@ -87,6 +109,7 @@ Or use the jupyter notebook if you want to avoid repetitive loading Grounded-SAM
 
 ### Annotate the video with human hand information
 
+Make sure you run `03_hand_analysis.py` in the virtualenvironment for HaMeR.
 ```
 python scripts/03_hand_analysis.py --annotation-path ANNOTATION_FOLDER
 ```
