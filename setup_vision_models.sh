@@ -14,6 +14,14 @@ mkdir xmem_checkpoints
 
 mv XMem/saves/*pth xmem_checkpoints/
 
+# Cutie, as a replacement of XMem
+git clone https://github.com/hkchengrex/Cutie.git
+cd Cutie
+pip install -e .
+
+python scripts/download_models.py
+cd ..
+
 
 # cotracker
 git clone https://github.com/facebookresearch/co-tracker

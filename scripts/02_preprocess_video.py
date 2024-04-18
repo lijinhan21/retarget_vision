@@ -6,6 +6,7 @@ import argparse
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--annotation-folder", type=str, default=None)
+    parser.add_argument("--tracker-type", type=str, default="cutie", choices=["xmem", "cutie"])
     parser.add_argument("--save-video", action="store_true")
     parser.add_argument('--tap-pen', type=float, default=10, help='Penalty for changepoint detection.')
     args = parser.parse_args()
@@ -16,7 +17,9 @@ def main():
         "python",
         "scripts/02a_xmem_annotation.py",
         "--annotation-folder",
-        args.annotation_folder
+        args.annotation_folder,
+        "--tracker-type",
+        args.tracker_type,
     ]
     command = " ".join(commands)
     os.system(command)
