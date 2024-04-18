@@ -16,21 +16,52 @@ import init_path
 from orion.utils.misc_utils import (
     load_first_frame_from_hdf5_dataset, 
     export_video_from_hdf5_dataset,
-    load_first_frame_from_human_hdf5_dataset, 
+    load_first_frame_from_human_hdf5_dataset,
+    load_multiple_frames_from_human_hdf5_dataset,
     export_video_from_human_hdf5_dataset,
     overlay_xmem_mask_on_image
     )
+from orion.utils.gpt4v_utils import encode_imgs_from_path, json_parser
+from orion.algos.gpt4v import GPT4V
 from orion.algos.grounded_sam_wrapper import GroundedSamWrapper
 import argparse
 
 
 torch.set_grad_enabled(False)
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--human_demo", default="iphone_front_boat/iphone_front_boat_demo.hdf5", help="Path to a human demo file")
     return parser.parse_args()
+
+def identify_objects_prompt():
+    prompt = '''You need to analyze what the human is doing in the images, then identify the objects of interest. They are likely the objects manipulated by human or near human. 
+Note that there are likely to have some irrelevant objects in the scene, you need to determine what the man is doing and extract only the relevent objects. The number of relevent objects of interest are typically less than 4.
+Your output format is:
+
+The human is xxx. The objects of interest are:
+```json
+{
+    "objects": ["OBJECT1", "OBJECT2", ...],
+}
+```
+
+Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing commas, no single quotes, etc. 
+You should output the names of objects of interest in a list ["OBJECT1", "OBJECT2", ...] that can be easily parsed by Python. The name is a string, e.g., "apple", "pen", "keyboard", etc.
+'''
+    return prompt
+
+def identify_objects(vlm, img_paths):
+    vlm.begin_new_dialog()
+    base64_img_list = [encode_imgs_from_path(vlm, img_paths)]
+    text_prompt_list = [identify_objects_prompt()]
+    text_response = vlm.run(text_prompt_list, base64_img_list)
+    print(text_response)
+
+    json_data = json_parser(text_response)
+    if json_data is None:
+        return None
+    return json_data
 
 def main():
     args = parse_args()
@@ -49,13 +80,17 @@ def main():
     os.makedirs(os.path.join(tmp_path, "images"), exist_ok=True)
 
     # TODO: need to check if only one frame is enough
-    first_frame = load_first_frame_from_human_hdf5_dataset(args.human_demo, bgr=True)
+    # first_frame = load_first_frame_from_human_hdf5_dataset(args.human_demo, bgr=True)
+    image_lst = load_multiple_frames_from_human_hdf5_dataset(args.human_demo, 3, bgr=True)
 
-    cv2.imwrite(os.path.join(os.path.join(tmp_path, "images", "frame.jpg")), first_frame)
+    img_paths = []
+    for idx, frame in enumerate(image_lst):
+        cv2.imwrite(os.path.join(os.path.join(tmp_path, "images", f"frame_{idx}.jpg")), frame)
+        img_paths.append(os.path.join(os.path.join(tmp_path, "images", f"frame_{idx}.jpg")))
 
-    # TODO: cal vlm to get text description
     with open(os.path.join(annotation_path, "text_description.json"), "w") as f:
-        text_description = {"objects": []} # TODO: parse from vlm output
+        vlm = GPT4V()
+        text_description = identify_objects(vlm, img_paths)
         json.dump(text_description, f)
 
     # remove the folder

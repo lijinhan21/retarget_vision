@@ -61,12 +61,13 @@ def main():
     os.makedirs(os.path.join(tmp_path, "masks"), exist_ok=True)
     final_mask_image.save(os.path.join(tmp_path, "masks", "frame.png"))
     overlay_image = overlay_xmem_mask_on_image(first_frame, np.array(final_mask_image), use_white_bg=True, rgb_alpha=0.3)
+    print("overlay_image generate ok!")
 
-    try:
-        plt.imshow(overlay_image)
-        plt.show()
-    except:
-        pass
+    # try:
+    #     plt.imshow(overlay_image)
+    #     plt.show()
+    # except:
+    #     pass
 
     # copy a image from a folder to another
     shutil.copyfile(os.path.join(tmp_path, "images", "frame.jpg"), os.path.join(annotation_path, "frame.jpg"))

@@ -986,6 +986,27 @@ def export_video_from_human_hdf5_dataset(
     video_path = video_writer.save()
     return video_path
 
+def load_multiple_frames_from_human_hdf5_dataset(
+        dataset_name,
+        num_frames,
+        flip=False,
+        bgr=False,
+        image_name="agentview_rgb",
+):
+    with h5py.File(dataset_name, "r") as dataset:
+        dataset_length = len(dataset[f"data/human_demo/obs/{image_name}"])
+        frame_ids = np.linspace(0, dataset_length - 1, num_frames).astype(int)
+        images = []
+        for frame_id in frame_ids:
+            image = dataset[f"data/human_demo/obs/{image_name}"][frame_id]
+            if flip:
+                image = image[::-1]
+            if bgr:
+                image = image[:, :, ::-1]
+            images.append(image)
+    
+    return images
+
 def load_first_frame_from_human_hdf5_dataset(
         dataset_name,
         flip=False,
