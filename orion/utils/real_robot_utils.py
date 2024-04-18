@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 
+from orion.utils import YamlConfig
+
 from deoxys_vision.networking.camera_redis_interface import CameraRedisSubInterface
 from deoxys_vision.utils.calibration_utils import load_default_extrinsics, load_default_intrinsics
 from deoxys_vision.utils.camera_utils import assert_camera_ref_convention, get_camera_info
@@ -32,24 +34,9 @@ class RealRobotObsProcessor():
             self.camera_info_dict[camera_info.camera_name] = camera_info
 
         self.camera_names = list(self.cr_interfaces.keys())
-        # self.img_processor = eval(processor_name)()
         self.type_fn = lambda x: self.camera_info_dict[x].camera_type
         self.id_fn = lambda x: self.camera_info_dict[x].camera_id
         self.name_conversion_fn = lambda x: cfg.camera_name_conversion[f"{x}"]
-
-        # self.fx_fy_dict = self.img_processor.get_fx_fy_dict()
-
-        # self.original_image_size_dict = {
-        #     "k4a": {
-        #         0: (1280, 720),
-        #         1: (1280, 720),
-        #     },
-        #     "rs": {
-        #         0: (640, 480),
-        #         1: (640, 480),
-        #     }
-            
-        # }
 
     def load_state(self, 
                    key, 
@@ -131,20 +118,7 @@ class RealRobotObsProcessor():
             camera_id = self.id_fn(camera_name)
             resized_color_img = color_img
             resized_depth_img = depth_img
-            # resized_color_img = self.img_processor.resize_img(color_img,
-            #                                         camera_type=camera_type,
-            #                                         img_w=self.cfg.img_w,
-            #                                         img_h=self.cfg.img_h,
-            #                                         fx=self.fx_fy_dict[camera_type][camera_id]['fx'],
-            #                                         fy=self.fx_fy_dict[camera_type][camera_id]['fy']
-            #                     )
-            # resized_depth_img = self.img_processor.resize_img(depth_img,
-            #                                         camera_type=camera_type,
-            #                                         img_w=self.cfg.img_w,
-            #                                         img_h=self.cfg.img_h,
-            #                                         fx=self.fx_fy_dict[camera_type][camera_id]['fx'],
-            #                                         fy=self.fx_fy_dict[camera_type][camera_id]['fy']
-            #                     )
+
             self._obs[self.name_conversion_fn(camera_name) + "_rgb"] = convert_convention(resized_color_img, real_robot=True)
             self._obs[self.name_conversion_fn(camera_name) + "_depth"] = convert_convention(resized_depth_img, real_robot=True)
 
@@ -168,6 +142,53 @@ class RealRobotObsProcessor():
     def obs(self):
         return self._obs
     
+class ImageCapturer:
+    def __init__(self, 
+                 config_path="configs/real_robot_observation_cfg.yml",
+                 record=True):
+        # Load the configuration for observations from a YAML file
+        self.observation_cfg = YamlConfig(config_path).as_easydict()
+        self._configure_cameras()
+        self.obs_processor = RealRobotObsProcessor(self.observation_cfg,
+                                                   processor_name="ImageProcessor")
+        # Pre-load intrinsic and extrinsic matrices as they may not change frequently
+        self.obs_processor.load_intrinsic_matrix(resize=False)
+        self.obs_processor.load_extrinsic_matrix()
+
+        self.record_images = []
+        self.record = True
+
+    def clear_record_images(self):
+        self.record_images = []
+
+    def _configure_cameras(self):
+        # Reconfigure the camera settings based on the configuration file
+        self.observation_cfg.cameras = []
+        for camera_ref in self.observation_cfg.camera_refs:
+            assert_camera_ref_convention(camera_ref)  # Assuming this is a function to validate the camera reference
+            camera_info = get_camera_info(camera_ref)  # Assuming this fetches camera configuration
+            self.observation_cfg.cameras.append(camera_info)
+
+    def get_last_obs(self, camera_name="agentview"):
+        # Use the observation processor to capture color and depth images
+        extrinsic_matrix = self.obs_processor.get_extrinsic_matrix(camera_name)
+        intrinsic_matrix = self.obs_processor.get_intrinsic_matrix(camera_name)
+        color_imgs, depth_imgs = self.obs_processor.get_original_imgs()
+
+        return {
+            "color_img": color_imgs[0],
+            "depth_img": depth_imgs[0],
+            "extrinsics": extrinsic_matrix,
+            "intrinsics": intrinsic_matrix
+        }
+    
+    def record_obs(self, mode="rgb"):
+        if not self.record:
+            return
+        obs_dict = self.get_last_obs()
+        if mode == "rgb":
+            self.record_images.append(obs_dict["color_img"])
+
 
 class RolloutLogger():
     def __init__(self, 

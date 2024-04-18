@@ -54,7 +54,7 @@ def main():
     parser.add_argument('--depth', action='store_const', const='depth')
     parser.add_argument('--video', action='store_const', const='video')
     parser.add_argument('--quiet', action='store_const', const='quiet')
-    parser.add_argument('--rotate', action='store_true')
+    parser.add_argument('--rotate', default=None, type=str)
     parser.add_argument('--front-camera', action='store_true')
     parser.add_argument('--cut-head', type=int, default=10)
     parser.add_argument('--cut-tail', type=int, default=40)
@@ -171,8 +171,12 @@ def main():
                     color_seq = np.rot90(color_seq, k=1, axes=(1,2))
                     depth_seq = np.rot90(depth_seq, k=1, axes=(1,2))
                 else:
-                    color_seq = np.rot90(color_seq, k=3, axes=(1,2))
-                    depth_seq = np.rot90(depth_seq, k=3, axes=(1,2))
+                    if args.rotate == "cw":
+                        color_seq = np.rot90(color_seq, k=3, axes=(1,2))
+                        depth_seq = np.rot90(depth_seq, k=3, axes=(1,2))
+                    elif args.rotate == "ccw":
+                        color_seq = np.rot90(color_seq, k=1, axes=(1,2))
+                        depth_seq = np.rot90(depth_seq, k=1, axes=(1,2))
             obs_grp = ep_grp.create_group('obs')
 
             color_seq = color_seq[args.cut_head:-args.cut_tail]

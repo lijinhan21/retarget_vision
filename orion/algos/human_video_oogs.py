@@ -17,6 +17,9 @@ from orion.utils.correspondence_utils import CorrespondenceModel
 from orion.utils.traj_utils import SimpleTrajProcessor
 
 from orion.utils.o3d_utils import *
+from orion.utils.log_utils import get_orion_logger
+
+ORION_LOGGER = get_orion_logger("orion")
 
 def identify_outliers_with_silhouette(original_traj, n_clusters=2):
     traj = original_traj[:, 1:, :] - original_traj[:, :-1, :]
@@ -36,7 +39,7 @@ def identify_outliers_with_silhouette(original_traj, n_clusters=2):
 
     # Identify trajectories with low silhouette scores as outliers
     outlier_indices = np.where(silhouette_vals < np.mean(silhouette_vals) - np.std(silhouette_vals))[0]
-    print(f"Detected outlier indices: {outlier_indices}")
+    ORION_LOGGER.debug(f"Detected outlier indices: {outlier_indices}")
     return outlier_indices
 
 class HumanVideoOOGs():
@@ -123,8 +126,7 @@ class HumanVideoOOGs():
             tap_segmentation.load(human_video_annotation_path)
             self.temporal_segments = tap_segmentation.temporal_segments
 
-        if self.debug_mode:
-            print("temporal_segments: ", self.temporal_segments)
+        ORION_LOGGER.debug(f"temporal_segments: {self.temporal_segments}")
 
         self.human_object_graphs = []
         for segment in self.temporal_segments:
@@ -152,7 +154,7 @@ class HumanVideoOOGs():
             baseline_optical_flow=baseline_optical_flow
         )
         self.human_object_graphs.append(human_object_graph)
-        print("Generated # of human_object_graphs: ", len(self.human_object_graphs))
+        ORION_LOGGER.info(f"Generated # of human_object_graphs: {len(self.human_object_graphs)}")
 
 
     def skip_free_motion(self, current_idx):
@@ -178,7 +180,7 @@ class HumanVideoOOGs():
             for contact_state in graph_in_query.contact_states:
                 # print(contact_state, " : ", robot_object_graph.contact_states)
                 matching_condition = matching_condition & self.check_contact(contact_state, robot_object_graph.contact_states)
-            print(query_idx, ": ", matching_condition)
+            ORION_LOGGER.debug(f"Matching condition for {query_idx} : {matching_condition}")
             if matching_condition:
                 new_query_idx = self.skip_free_motion(query_idx)
                 if new_query_idx == query_idx:
@@ -187,8 +189,8 @@ class HumanVideoOOGs():
                     query_idx = new_query_idx
             else:
                 matched = False
-                print("Quitting: ", query_idx)
-            print(query_idx)
+                ORION_LOGGER.debug(f"Quitting: {query_idx}")
+            ORION_LOGGER.debug(query_idx)
             if query_idx >= self.num_graphs - 1:
                 break
         if query_idx != self.num_graphs - 1:
@@ -225,7 +227,7 @@ class HumanVideoOOGs():
     
     def get_graph(self, idx):
         if idx < 0 or idx >= len(self.human_object_graphs):
-            print("Invalid idx our of range: ", idx)
+            ORION_LOGGER.warning("Invalid idx our of range: ", idx)
             return None
         return self.human_object_graphs[idx]
     
@@ -243,7 +245,7 @@ class HumanVideoOOGs():
         if remove_outlier_config is None:
             remove_outlier_config = self.remove_outlier_config
         if (matched_idx == self.num_graphs - 1):
-            print("You've already completed the task!")
+            ORION_LOGGER.info("You've already completed the task!")
             # The last human object graph
             return None
         matched_human_object_graph = self.get_graph(matched_idx)
@@ -334,7 +336,7 @@ class HumanVideoOOGs():
                 subgoal_hausdorff_dist = hausdorff_distance(estimated_reference_pcd, sampled_new_reference_pcd)
                 
                 if subgoal_hausdorff_dist < best_subgoal_hausdoff and deviate_from_z_axis(subgoal_transform) < deviation_angle_threshold:
-                    print("target_hausdorff_dist: ", subgoal_hausdorff_dist)
+                    ORION_LOGGER.debug(f"target_hausdorff_dist: {subgoal_hausdorff_dist}")
                     best_subgoal_hausdoff = subgoal_hausdorff_dist
                     best_subgoal_transform = subgoal_transform
 
@@ -346,7 +348,7 @@ class HumanVideoOOGs():
                     sampled_new_target_pcd = random_subsampling(new_target_pcd, len(target_pcd))
                 target_hausdorff_dist = hausdorff_distance(estimated_target_pcd, sampled_new_target_pcd)
                 if target_hausdorff_dist < best_target_hausdoff and deviate_from_z_axis(target_transform) < deviation_angle_threshold:
-                    print("target_hausdorff_dist: ", target_hausdorff_dist)
+                    ORION_LOGGER.debug(f"target_hausdorff_dist: {target_hausdorff_dist}")
                     best_target_hausdoff = target_hausdorff_dist
                     best_target_transform = target_transform
             count += 1
@@ -440,7 +442,7 @@ class HumanVideoOOGs():
         """
         for graph_id in range(self.num_graphs):
             graph_in_query = self.get_graph(graph_id)
-            print("Current graph: ", graph_id)
+            ORION_LOGGER.debug(f"Current graph: {graph_id}")
             num_objects = graph_in_query.num_objects
 
             # graph_in_query.draw_scene_3d(draw_trajs=True)
@@ -465,7 +467,8 @@ class HumanVideoOOGs():
                 # v_std = np.std(np.sum((np.linalg.norm(traj_diff, axis=-1)), axis=1) / traj_diff.shape[1], axis=0)
                 v_mean = np.mean(np.linalg.norm(traj_diff, axis=-1))
                 v_std = np.std(np.linalg.norm(traj_diff, axis=-1))
-                print("object_id: ", object_id, " | v: ", v_mean, " | v_std: ", v_std)
+
+                ORION_LOGGER.debug(f"object_id: {object_id} | v:  {v_mean} | v_std: {v_std}")
 
                 if v_mean > velocity_threshold:
                     v_mean_list.append(v_mean)
@@ -520,7 +523,7 @@ class HumanVideoOOGs():
             
             graph_in_query.contact_states = contact_states
 
-            print("contact_states: ", graph_in_query.contact_states)
+            ORION_LOGGER.debug(f"contact_states: {graph_in_query.contact_states}")
             if graph_in_query.get_manipulate_object_id() > 0:
                 manipulate_object_id = graph_in_query.get_manipulate_object_id()
                 if len(contact_states) > 0:
@@ -569,54 +572,3 @@ def random_subsampling(point_cloud, num_points):
     indices = np.random.choice(point_cloud.shape[0], num_points, replace=False)
     subsampled = point_cloud[indices, :]
     return subsampled
-
-# def worker(reference_pcd, new_reference_pcd, target_pcd, new_target_pcd, global_registration_config):
-#     # Logic from inside your loop
-#     print("start worker")
-#     print("ln0")
-#     subgoal_transform = global_registration(reference_pcd, new_reference_pcd, voxel_size=global_registration_config["voxel_size"])
-#     estimated_reference_pcd = transform_point_clouds(subgoal_transform, reference_pcd)
-#     sampled_new_reference_pcd = new_reference_pcd
-#     if len(estimated_reference_pcd) > len(new_reference_pcd):
-#         estimated_reference_pcd = random_subsampling(estimated_reference_pcd, len(new_reference_pcd))
-#     else:
-#         sampled_new_reference_pcd = random_subsampling(new_reference_pcd, len(reference_pcd))
-#     subgoal_hausdorff_dist = hausdorff_distance(estimated_reference_pcd, sampled_new_reference_pcd)
-
-#     target_transform = global_registration(target_pcd, new_target_pcd, voxel_size=global_registration_config["voxel_size"] * np.random.uniform())
-
-
-
-#     estimated_target_pcd = transform_point_clouds(target_transform, target_pcd)
-#     sampled_new_target_pcd = new_target_pcd
-#     if len(estimated_target_pcd) > len(new_target_pcd):
-#         estimated_target_pcd = random_subsampling(estimated_target_pcd, len(new_target_pcd))
-#     else:
-#         sampled_new_target_pcd = random_subsampling(new_target_pcd, len(target_pcd))
-
-#     target_hausdorff_dist = hausdorff_distance(estimated_target_pcd, sampled_new_target_pcd)
-
-#     print("end worker")
-#     return subgoal_hausdorff_dist, subgoal_transform, target_hausdorff_dist, target_transform
-
-# def parallel_global_registration(num_max_iter, reference_pcd, new_reference_pcd, target_pcd, new_target_pcd, global_registration_config):
-#     best_subgoal_hausdoff = float('inf')
-#     best_target_hausdoff = float('inf')
-#     best_subgoal_transform = None
-#     best_target_transform = None
-
-#     # results = worker(reference_pcd, new_reference_pcd, target_pcd, new_target_pcd, global_registration_config)
-
-#     with mp.Pool() as pool:
-#         results = pool.starmap(worker, [(reference_pcd, new_reference_pcd, target_pcd, new_target_pcd, global_registration_config) for _ in range(num_max_iter)])
-
-#     for subgoal_hausdorff_dist, subgoal_transform, target_hausdorff_dist, target_transform in results:
-#         if subgoal_hausdorff_dist < best_subgoal_hausdoff:
-#             best_subgoal_hausdoff = subgoal_hausdorff_dist
-#             best_subgoal_transform = subgoal_transform
-#         if target_hausdorff_dist < best_target_hausdoff:
-#             print("target_hausdorff_dist: ", target_hausdorff_dist)
-#             best_target_hausdoff = target_hausdorff_dist
-#             best_target_transform = target_transform
-
-#     return best_subgoal_transform, best_target_transform

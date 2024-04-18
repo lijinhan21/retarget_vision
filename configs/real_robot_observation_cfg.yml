@@ -1,0 +1,28 @@
+camera_refs: ["rs_0"]
+
+camera_ids : [0]
+camera_types:
+  "camera_0": "rs"
+
+  # not used
+  "camera_1": "rs"
+  "camera_2": "rs"
+ 
+img_h: 224
+img_w: 224
+
+camera_name_conversion:
+  "camera_rs_0": "agentview"
+
+  # not used
+  "camera_rs_1": "agentview"
+  "camera_rs_2": "eye_in_hand"
+
+obs_key_mapping:
+  # camera_0 and camera_1 are workspace cameras
+  camera_rs_0_color: agentview_rgb
+  camera_rs_0_depth: agentview_depth
+
+  gripper_states: gripper_states
+  joint_states: joint-states
+  ee_states: ee_states

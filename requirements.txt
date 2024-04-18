@@ -1,1 +1,9 @@
 hausdorff
+h5py
+imageio
+easydict
+ruptures
+robosuite==1.4.0
+open3d
+sklearn
+imageio[ffmpeg]
