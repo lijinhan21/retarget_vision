@@ -12,7 +12,7 @@ from easydict import EasyDict
 
 
 from deoxys_vision.networking.camera_redis_interface import CameraRedisPubInterface
-from deoxys_vision.camera.k4a_interface import K4aInterface
+# from deoxys_vision.camera.k4a_interface import K4aInterface
 from deoxys_vision.camera.rs_interface import RSInterface
 from deoxys_vision.utils.img_utils import preprocess_color, preprocess_depth
 from deoxys_vision.utils.camera_utils import assert_camera_ref_convention, get_camera_info

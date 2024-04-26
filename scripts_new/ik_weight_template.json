@@ -1,0 +1,104 @@
+{
+    "GR1_body": {
+        "link_LArm2": {
+            "orientation_cost": 0.0,
+            "position_cost": 0
+        },
+        "link_RArm2": {
+            "orientation_cost": 0.0,
+            "position_cost": 0
+        },
+        "link_LArm4": {
+            "orientation_cost": 0.0,
+            "position_cost": 0
+        },
+        "link_RArm4": {
+            "orientation_cost": 0.0,
+            "position_cost": 0
+        },
+        "link_LArm7": {
+            "orientation_cost": 1.0,
+            "position_cost": 0
+        },
+        "link_RArm7": {
+            "orientation_cost": 1.0,
+            "position_cost": 0
+        }
+    },
+    "GR1_left_hand": {
+        "link_LArm10": {
+            "orientation_cost": 0.0,
+            "position_cost": 1.0
+        },
+        "link_LArm14": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        },
+        "link_LArm17": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        },
+        "link_LArm20": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        },
+        "link_LArm23": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        }
+    },
+    "GR1_right_hand": {
+        "link_RArm10": {
+            "orientation_cost": 0.0,
+            "position_cost": 1.0
+        },
+        "link_RArm14": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        },
+        "link_RArm17": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        },
+        "link_RArm20": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        },
+        "link_RArm23": {
+            "orientation_cost": 0.0,
+            "position_cost": [
+                1.0,
+                0.0,
+                1.0
+            ]
+        }
+    }
+}

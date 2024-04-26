@@ -6,5 +6,7 @@ datasets
 annotations
 weights
 logs
+tmp_video
 .ipynb_checkpoints
+GR1_retarget
 *.zip

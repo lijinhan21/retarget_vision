@@ -30,6 +30,16 @@ pip install -e .
 pip install matplotlib flow_vis tqdm tensorboard
 cd ..
 
+# Hand Object Detector
+git clone git@github.com:ddshan/hand_object_detector.git
+cd hand_object_detector
+pip install -r requirements.txt
+cd lib & pip install -e .
+cd ..
+mkdir /models/res101_handobj_100K
+cd /models/res101_handobj_100K
+wget https://drive.google.com/open?id=1H2tWsZkS7tDF8q1-jdjx6V9XrK25EDbE
+cd ../../..
 
 # dinov2
 git clone git@github.com:facebookresearch/dinov2.git

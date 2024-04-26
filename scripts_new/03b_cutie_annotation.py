@@ -9,7 +9,7 @@ import numpy as np
 import init_path
 
 from orion.algos.cutie_tracker import CutieTracker
-from orion.algos.xmem_tracker import XMemTracker
+# from orion.algos.xmem_tracker import XMemTracker
 from orion.utils.misc_utils import get_annotation_path, get_first_frame_annotation, VideoWriter, overlay_xmem_mask_on_image, add_palette_on_mask, get_video_seq_from_annotation
 
 def parse_args():
