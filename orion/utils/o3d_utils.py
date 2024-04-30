@@ -340,7 +340,7 @@ def global_registration(pcd_1_points,
 
 
 def load_reconstruction_info_from_human_demo(dataset_name, camera_name="iphone"):
-    human_first_frame_depth = load_first_frame_from_human_hdf5_dataset(dataset_name, image_name="agentview_depth")
+    # human_first_frame_depth = load_first_frame_from_human_hdf5_dataset(dataset_name, image_name="agentview_depth")
     with h5py.File(dataset_name, "r") as f:
         data_config = json.loads(f["data"].attrs["data_config"])
         print("data_config: ", data_config)
@@ -360,7 +360,7 @@ def load_reconstruction_info_from_human_demo(dataset_name, camera_name="iphone")
         [0, 0, 1]]
         )
     info = {
-        "depth": human_first_frame_depth,
+        # "depth": human_first_frame_depth,
         "intrinsics": camera_intrinsics_matrix,
         "extrinsics": camera_extrinsics_matrix
     }

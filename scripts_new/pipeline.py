@@ -5,6 +5,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--human_demo", type=str, default=None)
     parser.add_argument("--save-video", action="store_true", default=True)
+    parser.add_argument("--no-depth", action="store_true", default=False)
+    parser.add_argument("--no-smplh", action="store_true", default=False)
     parser.add_argument('--tap-pen', type=float, default=10, help='Penalty for changepoint detection.')
     args = parser.parse_args()
 
@@ -34,17 +36,6 @@ def main():
     command = " ".join(commands)
     os.system(command)
 
-    # 3. xmem segmentation
-    # print("*************XMem Segmentation*************")
-    # commands = [
-    #     "python",
-    #     "scripts_new/03_xmem_annotation.py",
-    #     "--annotation-folder",
-    #     annotation_path
-    # ]
-    # command = " ".join(commands)
-    # os.system(command)
-
     # 3. cutie segmentation
     print("*************Cutie Segmentation*************")
     commands = [
@@ -65,6 +56,7 @@ def main():
         annotation_path,
         "--num-track-points",
         "40",
+        "--no-depth" if args.no_depth else "",
     ]
     if not args.save_video:
         commands.append("--no-video")
@@ -80,6 +72,29 @@ def main():
         annotation_path,
         "--pen",
         str(args.tap_pen),
+    ]
+    command = " ".join(commands)
+    os.system(command)
+
+    # 6c. generate waypoint info
+    print("*************Waypoint Info*************")
+    commands = [
+        "python",
+        "scripts_new/06d_calculate_num_waypoints.py",
+        "--annotation-folder",
+        annotation_path,
+    ]
+    command = " ".join(commands)
+    os.system(command)
+
+    # 7. generate hoig
+    print("*************HOIG Generation*************")
+    commands = [
+        "python",
+        "scripts_new/07_generate_hoig.py",
+        "--annotation-folder",
+        annotation_path,
+        "--no-smplh" if args.no_smplh else "",
     ]
     command = " ".join(commands)
     os.system(command)

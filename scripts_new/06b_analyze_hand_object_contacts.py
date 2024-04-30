@@ -44,6 +44,7 @@ def main():
                                                           save_path=os.path.join(args.annotation_folder, f'keyframes/hand_object_dets/'))
         hand_info = hand_object_detector.parse_hand_info(hand_dets)
         print(f"Hand info for keyframe {i}: {hand_info}")
+        # TODO: save hand info to a json file
 
 if __name__ == "__main__":
     main()

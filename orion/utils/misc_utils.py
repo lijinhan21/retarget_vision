@@ -9,6 +9,7 @@ import json
 import yaml
 import random
 import numpy as np
+import pickle
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -52,6 +53,14 @@ def get_tracked_points_annotation(annotation_path):
     # pred_tracks: [B, T, N, 2]
     # pred_visibility: [B, T, N]
     return results
+
+def get_smplh_traj_annotation(annotation_path):
+    with open(os.path.join(annotation_path, "smplh_traj.pkl"), "rb") as f:
+        results = pickle.load(f)
+    return results
+
+def get_hand_object_contacts_annotation(annotation_path):
+    pass
 
 def get_optical_flow_annotation(annotation_path):
     results = torch.load(os.path.join(annotation_path, "dense_trajs.pt"))
