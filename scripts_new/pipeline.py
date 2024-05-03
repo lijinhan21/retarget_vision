@@ -8,6 +8,7 @@ def main():
     parser.add_argument("--no-depth", action="store_true", default=False)
     parser.add_argument("--no-smplh", action="store_true", default=False)
     parser.add_argument('--tap-pen', type=float, default=10, help='Penalty for changepoint detection.')
+    parser.add_argument('--smplh-path', type=str, default=None, help='Path to the smplh trajectory file.')
     args = parser.parse_args()
 
     mode = "human_demo"
@@ -76,7 +77,21 @@ def main():
     command = " ".join(commands)
     os.system(command)
 
-    # 6c. generate waypoint info
+    # 6c. human smplh analysis
+    print("*************Human SMPLH Analysis*************")
+    commands = [
+        "python",
+        "scripts_new/06c_human_smplh_analysis.py",
+        "--annotation-folder",
+        annotation_path
+    ]
+    if args.smplh_path is not None:
+        commands.append("--smplh-path")
+        commands.append(args.smplh_path)
+    command = " ".join(commands)
+    os.system(command)
+
+    # 6d. generate waypoint info
     print("*************Waypoint Info*************")
     commands = [
         "python",

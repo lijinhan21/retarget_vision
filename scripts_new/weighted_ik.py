@@ -89,7 +89,7 @@ def main():
     # s = np.load(args.input)
 
     print("data len=", len(s))
-    s = s[90:]
+    s = s[:]
     print("new data len=", len(s))
 
     data0 = s[0]
@@ -149,7 +149,7 @@ def main():
 
             for idx, link in enumerate(ik_weights["GR1_body"]):
                 ik_weights["GR1_body"][link]["position_cost"] = exp_weights[exp_idx][idx]
-            retargeter.update_weights(ik_weights)
+            # retargeter.update_weights(ik_weights)
             total_error = {}
             exp_idx += 1
 

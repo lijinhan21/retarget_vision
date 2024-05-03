@@ -10,3 +10,5 @@ tmp_video
 .ipynb_checkpoints
 GR1_retarget
 *.zip
+*.mp4
+*.hdf5

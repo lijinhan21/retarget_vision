@@ -73,7 +73,6 @@ def main():
         json_data = calculate_waypoints(vlm, img_paths)
         # print("results=", json_data["Answer"])
         res.append(json_data["Answer"])
-        exit(0)
 
     # remove the folder
     shutil.rmtree(tmp_path)

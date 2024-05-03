@@ -45,9 +45,10 @@ from orion.utils.o3d_utils import (
     filter_pcd)
 from orion.utils.traj_utils import SimpleTrajProcessor, Interpolator
 from orion.utils.correspondence_utils import CorrespondenceModel, find_most_repeated_number
-
+from orion.utils.robosuite_utils import *
 from orion.utils.log_utils import get_orion_logger
 from orion.algos.retargeter_wrapper import Retargeter
+from orion.algos.grasp_primitives import GraspPrimitive
 
 ORION_LOGGER = get_orion_logger("orion")
 
@@ -59,6 +60,7 @@ class Hand:
     def __init__(self, lr):
         self.lr = HandType.LEFT if lr == 'left' else HandType.RIGHT
         self.hand_object_contacts = []
+        self.grasp_type = None
 
 class SMPLHTraj:
     def __init__(self, ratio=1.0):
@@ -114,6 +116,7 @@ class HandObjectInteractionGraph:
         self.human_video_annotation_path = ""
 
         self.retargeted_ik_traj = np.array([])
+        self.grasp_type = [None, None]
 
     @property
     def segment_length(self):
@@ -188,7 +191,7 @@ class HandObjectInteractionGraph:
         img_lst = [video_seq[idx] for idx in img_idx]
         return img_lst
 
-    def get_retargeted_ik_traj(self, offset={"link_RArm7": [0, 0, 0]}, num_waypoints=0, interpolation_steps=-1, interpolation_type='linear'):
+    def get_retargeted_ik_traj(self, retargeter, offset={"link_RArm7": [0, 0, 0]}, num_waypoints=0, interpolation_steps=-1, interpolation_type='linear'):
         smplh_traj = self.human_node.smplh_traj.smplh_traj
         num_frames = len(smplh_traj)
         
@@ -197,21 +200,60 @@ class HandObjectInteractionGraph:
         key_smplh_traj = [smplh_traj[idx] for idx in key_smplh_idx]
 
         if interpolation_steps == -1:
-            interpolation_steps = min(int(num_frames // num_key_steps), 30)
+            interpolation_steps = min(int(num_frames // num_key_steps) * 3, 40)
         interpolator = Interpolator(interpolation_type)
         
-        retargeter = Retargeter(example_data=key_smplh_traj[0])
         key_retargeted_traj = []
         for i in range(num_key_steps):
             retargeted_traj, _, __ = retargeter.retarget(key_smplh_traj[i], offset=offset)
-            key_retargeted_traj.append(retargeted_traj)
+            key_retargeted_traj.append(retargeted_traj.copy())
         key_retargeted_traj = np.array(key_retargeted_traj)
 
-        retargeted_traj = []
+        res = []
         for i in range(num_key_steps - 1):
             for j in range(interpolation_steps):
-                retargeted_traj.append(interpolator(key_retargeted_traj[i], key_retargeted_traj[i+1], j, interpolation_steps))
-        retargeted_traj.append(key_retargeted_traj[-1])
+                res.append(interpolator(key_retargeted_traj[i], key_retargeted_traj[i+1], j, interpolation_steps))
 
-        self.retargeted_ik_traj = np.array(retargeted_traj)
+        self.retargeted_ik_traj = np.array(res)
+        return self.retargeted_ik_traj
+    
+    def get_retargeted_ik_traj_with_grasp_primitive(self,
+                                                    retargeter,
+                                                    offset={"link_RArm7": [0, 0, 0]},
+                                                    num_waypoints=0,
+                                                    interpolation_steps=-1,
+                                                    interpolation_type='linear'):
+        smplh_traj = self.human_node.smplh_traj.smplh_traj
+        num_frames = len(smplh_traj)
+        
+        num_key_steps = num_waypoints + 2
+        key_smplh_idx = np.linspace(0, num_frames-1, num_key_steps, dtype=int)
+        key_smplh_traj = [smplh_traj[idx] for idx in key_smplh_idx]
+
+        if interpolation_steps == -1:
+            interpolation_steps = min(int(num_frames // num_key_steps) * 3, 40)
+        interpolator = Interpolator(interpolation_type)
+        
+        key_retargeted_traj = []
+        for i in range(num_key_steps):
+            retargeted_traj, _, __ = retargeter.retarget(key_smplh_traj[i], offset=offset)
+            key_retargeted_traj.append(retargeted_traj.copy())
+        key_retargeted_traj = np.array(key_retargeted_traj)
+
+        res = []
+        for i in range(num_key_steps - 1):
+            for j in range(interpolation_steps):
+                res.append(interpolator(key_retargeted_traj[i], key_retargeted_traj[i+1], j, interpolation_steps))
+        res = np.array(res)
+
+        # calculate grasp primitive
+        grasp_dict = GraspPrimitive()
+        actuator_idxs = np.array([0, 1, 8, 10, 4, 6])
+        hand_primitive_l = grasp_dict.sequence_map_to_primitive(res[:, 13 + actuator_idxs])
+        hand_primitive_r = grasp_dict.sequence_map_to_primitive(res[:, 32 + actuator_idxs])
+        res[:, 13 + actuator_idxs] = np.tile(hand_primitive_l[0], (res.shape[0], 1))
+        res[:, 32 + actuator_idxs] = np.tile(hand_primitive_r[0], (res.shape[0], 1))
+        print("primitive for left right hand is", hand_primitive_l[1], hand_primitive_r[1])
+
+        self.retargeted_ik_traj = res
         return self.retargeted_ik_traj

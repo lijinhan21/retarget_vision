@@ -1,0 +1,91 @@
+thumb0_config:
+  in: 90
+  out: 0
+
+thumb_config:
+  extend: 0
+  slightly_bent: 30
+  bent: 45
+  folded: 60
+  tucked: 80
+  
+finger_config:
+  extend: 0
+  slightly_bent: 30
+  bent: 60
+  folded: 75
+  tucked: 90
+
+grasp_primitives:
+
+  # large_diameter:
+  #   thumb0: in
+  #   thumb: slightly_bent
+  #   index: slightly_bent
+  #   middle: slightly_bent
+  #   ring: slightly_bent
+  #   pinky: slightly_bent
+
+  small_diameter:
+    thumb0: in
+    thumb: slightly_bent
+    index: folded
+    middle: folded
+    ring: folded
+    pinky: folded
+
+  palmar_pinch:
+    thumb0: in
+    thumb: slightly_bent
+    index: bent
+    middle: extend
+    ring: extend
+    pinky: extend
+
+  prismatic_finger:
+    thumb0: in
+    thumb: slightly_bent
+    index: bent
+    middle: bent
+    ring: tucked
+    pinky: tucked
+
+  quadpod:
+    thumb0: in
+    thumb: slightly_bent
+    index: slightly_bent
+    middle: slightly_bent
+    ring: slightly_bent
+    pinky: extend
+
+  light_tool:
+    thumb0: out
+    thumb: slightly_bent
+    index: tucked
+    middle: tucked
+    ring: tucked
+    pinky: tucked
+
+  # precision_disk:
+  #   thumb0: out
+  #   thumb: slightly_bent
+  #   index: slightly_bent
+  #   middle: slightly_bent
+  #   ring: slightly_bent
+  #   pinky: slightly_bent
+
+  ready:
+    thumb0: in
+    thumb: extend
+    index: extend
+    middle: extend
+    ring: extend
+    pinky: extend
+  
+  palm:
+    thumb0: out
+    thumb: extend
+    index: extend
+    middle: extend
+    ring: extend
+    pinky: extend

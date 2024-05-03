@@ -21,7 +21,7 @@ def main():
     human_video_hoig.generate_from_human_video(args.annotation_folder, 1.2, use_smplh=False if args.no_smplh else True)
 
     if not args.no_smplh:
-        print("shape of retargeted traj", human_video_hoig.get_retargeted_ik_traj().shape)
+        print("shape of retargeted traj", human_video_hoig.get_retargeted_ik_traj()[0].shape)
     
     human_video_hoig.visualize_plan()
 

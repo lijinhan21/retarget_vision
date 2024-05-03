@@ -1,20 +1,16 @@
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_samples
-from sklearn.preprocessing import StandardScaler
-from hausdorff import hausdorff_distance
-
 # mp
 import multiprocessing as mp
 from orion.utils.misc_utils import *
 from orion.utils.tap_utils import *
 from orion.algos.hoig import HandObjectInteractionGraph
-from orion.algos.tap_segmentation import TAPSegmentation, OpticalFlowSegmentation
+from orion.algos.tap_segmentation import TAPSegmentation
 from orion.algos.temporal_segments import TemporalSegments
 from orion.utils.correspondence_utils import CorrespondenceModel
 from orion.utils.traj_utils import SimpleTrajProcessor
 
 from orion.utils.o3d_utils import *
 from orion.utils.log_utils import get_orion_logger
+from orion.algos.retargeter_wrapper import Retargeter
 
 class HumanVideoHOIG:
     def __init__(self):
@@ -22,6 +18,9 @@ class HumanVideoHOIG:
         self.waypoints_info = []
         self.hoigs = []
         self.human_video_annotation_path = ""
+
+        self.smplh_traj = np.array([])
+        self.retargeted_ik_traj = np.array([])
 
     def generate_from_human_video(self, human_video_annotation_path, video_smplh_ratio=1.0, use_smplh=True):
         
@@ -33,6 +32,9 @@ class HumanVideoHOIG:
 
         with open(os.path.join(human_video_annotation_path, "waypoints_info.json"), "r") as f:
             self.waypoints_info = json.load(f)
+
+        if use_smplh:
+            self.smplh_traj = get_smplh_traj_annotation(human_video_annotation_path)
 
         self.hoigs = []
         for i in range(len(self.temporal_segments.segments)):
@@ -49,14 +51,51 @@ class HumanVideoHOIG:
                                offset={"link_RArm7": [0, 0, 0]}, 
                                interpolation_steps=-1,
                                interpolation_type='linear'):
+        
+        retargeter = Retargeter(example_data=self.smplh_traj[0])
+
         ik_traj = []
         for idx, hoig in enumerate(self.hoigs):
-            hoig.get_retargeted_ik_traj(offset=offset, 
-                                        num_waypoints=0 if self.waypoints_info[idx] == 'Target Only' else hoig.segment_length//2,
+            hoig.get_retargeted_ik_traj(retargeter=retargeter,
+                                        offset=offset, 
+                                        num_waypoints=3 if self.waypoints_info[idx] == 'Target Only' else hoig.segment_length//2,
                                         interpolation_steps=interpolation_steps, 
                                         interpolation_type=interpolation_type)
             ik_traj.append(hoig.retargeted_ik_traj)
-        return np.concatenate(ik_traj, axis=0)
+        whole_traj = np.concatenate(ik_traj, axis=0)
+        self.retargeted_ik_traj = whole_traj
+        return whole_traj, ik_traj
+    
+    def get_retargeted_ik_traj_with_grasp_primitive(self, 
+                                                    offset={"link_RArm7": [0, 0, 0]}, 
+                                                    interpolation_steps=-1, 
+                                                    interpolation_type='linear'):
+        
+        retargeter = Retargeter(example_data=self.smplh_traj[0])
+
+        ik_traj = []
+        for idx, hoig in enumerate(self.hoigs):
+            hoig.get_retargeted_ik_traj_with_grasp_primitive(retargeter=retargeter,
+                                                             offset=offset, 
+                                                             num_waypoints=3 if self.waypoints_info[idx] == 'Target Only' else hoig.segment_length//2,
+                                                             interpolation_steps=interpolation_steps, 
+                                                             interpolation_type=interpolation_type)
+            ik_traj.append(hoig.retargeted_ik_traj)
+
+        # fill in middle of grasp primitive change
+        new_traj = []
+        for i in range(len(ik_traj)):
+            grasp_tar = ik_traj[i][0]
+            grasp_lst = ik_traj[i - 1][-1] if i > 0 else ik_traj[i][0]
+            grasp_traj = []
+            for j in range(70):
+                grasp_traj.append(grasp_lst + (grasp_tar - grasp_lst) * (j / 70))
+            new_traj.append(np.array(grasp_traj))
+            new_traj.append(ik_traj[i])
+        whole_traj = np.concatenate(new_traj, axis=0)
+
+        self.retargeted_ik_traj = whole_traj
+        return whole_traj, new_traj
     
     def get_num_segments(self):
         return len(self.hoigs)
