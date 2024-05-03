@@ -109,9 +109,9 @@ def main():
     for i in ik_traj:
         print(i.shape)
 
-    # save ik_traj[1]
-    # with open("sim_test/000888_ik.npy", "wb") as f:
-    #     np.save(f, ik_traj[1])
+    # save trajectory
+    with open(os.path.join(args.annotation_folder, 'ik_traj_with_grasp_primitives.npy'), "wb") as f:
+        np.save(f, whole_traj)
 
     grasp_primitive = GraspPrimitive()
     launch_simulator(args, 

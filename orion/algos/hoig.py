@@ -254,6 +254,7 @@ class HandObjectInteractionGraph:
         res[:, 13 + actuator_idxs] = np.tile(hand_primitive_l[0], (res.shape[0], 1))
         res[:, 32 + actuator_idxs] = np.tile(hand_primitive_r[0], (res.shape[0], 1))
         print("primitive for left right hand is", hand_primitive_l[1], hand_primitive_r[1])
+        self.grasp_type = [hand_primitive_l[1], hand_primitive_r[1]]
 
         self.retargeted_ik_traj = res
         return self.retargeted_ik_traj

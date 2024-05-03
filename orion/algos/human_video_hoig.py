@@ -100,7 +100,7 @@ class HumanVideoHOIG:
     def get_num_segments(self):
         return len(self.hoigs)
     
-    def visualize_plan(self):
+    def visualize_plan(self, no_smplh=False):
         video_seq = get_video_seq_from_annotation(self.human_video_annotation_path)
 
         initial_images = []
@@ -117,17 +117,19 @@ class HumanVideoHOIG:
                 else:
                     img = video_seq[segment.start_idx].copy()
 
-                self.add_text_on_image(img, f"Segment {segment.start_idx}-{segment.end_idx}", color=(0,0,0))
-                self.add_text_on_image(img, self.waypoints_info[idx], color=(0,0,255), pos=(50,70))
+                self.add_text_on_image(img, f"Segment {segment.start_idx}-{segment.end_idx}", pos=(10,30), color=(0,0,0), fontsize=0.8)
+                self.add_text_on_image(img, self.waypoints_info[idx], color=(0,0,255), pos=(50,60), fontsize=0.8)
+                if not no_smplh:
+                    self.add_text_on_image(img, f"Hand Pose: {self.hoigs[idx].grasp_type}", color=(0,0,0), pos=(0,90), fontsize=0.8)
                 image_frame.append(img)
             
             image_frame = np.concatenate(image_frame, axis=1)
             video_writer.append_image(image_frame)
         video_writer.save(bgr=False)
     
-    def add_text_on_image(self, img, text, pos=(10,30), color=(255,255,255)):
+    def add_text_on_image(self, img, text, pos=(10,30), color=(255,255,255), fontsize=1):
         font = cv2.FONT_HERSHEY_SIMPLEX
-        fontScale = 1
+        fontScale = fontsize
         fontColor = color
         lineType = 2
         cv2.putText(img, text, 

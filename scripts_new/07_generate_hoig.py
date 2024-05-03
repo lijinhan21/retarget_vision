@@ -22,8 +22,9 @@ def main():
 
     if not args.no_smplh:
         print("shape of retargeted traj", human_video_hoig.get_retargeted_ik_traj()[0].shape)
+        human_video_hoig.get_retargeted_ik_traj_with_grasp_primitive()
     
-    human_video_hoig.visualize_plan()
+    human_video_hoig.visualize_plan(no_smplh=args.no_smplh)
 
 if __name__ == "__main__":
     main()

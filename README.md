@@ -9,14 +9,16 @@ conda create --name orion python=3.9
 
 Then first install the latest torch in this virtual environment before you proceed. This is to make sure `torch` can correctly installed with cuda enabled. Note that you should create a separate virtualenv in order to run HaMeR.
 
-### Install DINOv2, SAM, XMem, Cotracker
+### Install DINOv2, SAM, XMem, Cotracker, Cutie, Hand Object Detector
 1. Run `./setup_vision_models.sh` to install the following packages:
     - DINOv2
     - SAM
     - XMem
     - Cotracker
+    - Cutie
+    - Hand Object Detector
 
-### Install HaMeR
+<!-- ### Install HaMeR
 Follow the instruction at [HaMeR](https://github.com/geopavlakos/hamer), and install it under `third_party`.
 
 Then, in order to run the model in our repo, we need to modify the path of some folders. The following step is recommended under the project root directory:
@@ -30,7 +32,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 ```
 
 Note that it's recommended to use a separate conda environment to run the HaMeR code. There are some package version conflicts that make it difficult to run HaMeR in the same environment as the rest of the code. Luckily, this part is only for offline processing, so it's won't affect workflow at test time. 
-
+ -->
 
 
 
@@ -60,21 +62,63 @@ The resulting directory structure should look like this:
 _DATA # for hamer
 third_party/
     co-tracker/
+    cutie/
     dinov2/
     segment-anything/
-    hamer/
-    Grounded-Segment-Anything/
+    GroundingDINO/
+    hand_object_detector/
     sam_checkpoints/
+    segment-anything/
     XMem/
     xmem_checkpoints/
 ```
 
+## 2. Data Preparation (scripts_new)
 
-## 2. Data Preparation
+### Generate from RGB videos
+
+First, put your video inside `datasets/iphones`, then generate hdf5 file
+```
+python scripts_new/create_hdf5_from_rgb.py --filepath PATH_TO_VIDEO_RELATIVE_TO_datasets/iphones
+```
+
+Then run pipeline to do temporal segmentation.
+```
+python scripts_new/pipeline.py --human_demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-depth --no-smplh
+```
+
+All generated results are in `annotation\human_demo` folder.
+
+### Generate from RGBD videos
+
+Assume that you already convert rgbd video into a hdf5 file. Put the hdf5 file under `datasets/iphones`.
+
+If you have smplh file, run 
+```
+MUJOCO_GL="glx" python scripts_new/pipeline.py --human_demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --smplh-path PATH_TO_SMPLH
+``` 
+If you do not have smplh file, run
+```
+MUJOCO_GL="glx" python scripts_new/pipeline.py --human_demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-smplh
+```
+
+### Details
+
+1. Generate text descriptions of objects of interest in the video by VLM.
+2. Run GAM segmentation on the first frame.
+3. Use cutie to do VOS.
+4. Sample keypoints, and use cotracker to track them.
+5. Do temporal segmentation.
+6. Prepare to generate hoig:
+    - Generate human smplh trajectory from video
+    - Determine whether need waypoints for each step by VLM. (Output 'Target Only' or 'Whole Trajectory')
+    - TODO: calculate ik weights by VLM, and do hand object contact detection by hand_object_detector.
+7. Generate hoig from video, retarget and apply ik (with grasp primitives), and visualize the plan in `plan_vis.mp4` in annotation folder.
+
+## 2. Data Preparation (scripts)
 
 ### Record the video and export the file
 1. Record the video using the `Record3D` app.
-
 
 2. Export the file from the app. The exported file will be in `.r3d` format.
 
