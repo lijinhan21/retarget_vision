@@ -84,7 +84,11 @@ python scripts_new/create_hdf5_from_rgb.py --filepath PATH_TO_VIDEO_RELATIVE_TO_
 
 Then run pipeline to do temporal segmentation.
 ```
-python scripts_new/pipeline.py --human_demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-depth --no-smplh
+python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-depth --no-smplh
+```
+If you have access to smplh model, put it under `datasets/smplh`, run
+```
+MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-depth --smplh-path PATH_TO_SMPLH_RELATIVE_TO_datasets/smplh
 ```
 
 All generated results are in `annotation\human_demo` folder.
@@ -93,13 +97,13 @@ All generated results are in `annotation\human_demo` folder.
 
 Assume that you already convert rgbd video into a hdf5 file. Put the hdf5 file under `datasets/iphones`.
 
-If you have smplh file, run 
+If you have smplh file, put it under `datasets/smplh`, and run 
 ```
-MUJOCO_GL="glx" python scripts_new/pipeline.py --human_demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --smplh-path PATH_TO_SMPLH
+MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --smplh-path PATH_TO_SMPLH_RELATIVE_TO_datasets/smplh
 ``` 
 If you do not have smplh file, run
 ```
-MUJOCO_GL="glx" python scripts_new/pipeline.py --human_demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-smplh
+MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-smplh
 ```
 
 ### Details
@@ -112,7 +116,8 @@ MUJOCO_GL="glx" python scripts_new/pipeline.py --human_demo PATH_TO_HDF5_RELATIV
 6. Prepare to generate hoig:
     - Generate human smplh trajectory from video
     - Determine whether need waypoints for each step by VLM. (Output 'Target Only' or 'Whole Trajectory')
-    - TODO: calculate ik weights by VLM, and do hand object contact detection by hand_object_detector.
+    - Do hand object detection, detact whether hand is in contact with a protable object in each step.
+    - TODO: calculate ik weights by VLM.
 7. Generate hoig from video, retarget and apply ik (with grasp primitives), and visualize the plan in `plan_vis.mp4` in annotation folder.
 
 ## 2. Data Preparation (scripts)

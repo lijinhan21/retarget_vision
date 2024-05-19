@@ -3,7 +3,7 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--human_demo", type=str, default=None)
+    parser.add_argument("--human-demo", type=str, default=None)
     parser.add_argument("--save-video", action="store_true", default=True)
     parser.add_argument("--no-depth", action="store_true", default=False)
     parser.add_argument("--no-smplh", action="store_true", default=False)
@@ -73,6 +73,17 @@ def main():
         annotation_path,
         "--pen",
         str(args.tap_pen),
+    ]
+    command = " ".join(commands)
+    os.system(command)
+
+    # 6b. analyze hand object contacts
+    print("*************Hand Object Contacts*************")
+    commands = [
+        "python",
+        "scripts_new/06b_analyze_hand_object_contacts.py",
+        "--annotation-folder",
+        annotation_path
     ]
     command = " ".join(commands)
     os.system(command)

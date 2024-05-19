@@ -37,6 +37,19 @@ class GraspPrimitive:
             self.finger_config[key] = value / 180 * np.pi
 
         self.add_from_dict(config.grasp_primitives)
+        
+        self.offset = np.zeros(6)
+
+        self.types = config.types
+    
+    def calibrate(self, frist_frame_joint_angles, zero_pose_name="ready"):
+        zero_pose = self.get_joint_angles(zero_pose_name)
+        while True:
+            min_dis, name = self.point_map_to_primitive(frist_frame_joint_angles)
+            if zero_pose_name == name:
+                break
+            self.offset += (zero_pose - frist_frame_joint_angles - self.offset) * 0.5
+        print("after calibrate, offset:", self.offset)
 
     def add_primitive(self, name, pose):
         self.name_to_pose[name] = pose
@@ -47,19 +60,25 @@ class GraspPrimitive:
             hand_pose.set_pose(pose["thumb0"], pose["thumb"], pose["index"], pose["middle"], pose["ring"], pose["pinky"])
             self.add_primitive(name, hand_pose)
 
-    def point_map_to_primitive(self, joint_angles):
+    def point_map_to_primitive(self, joint_angles, type='none'):
         def euclidean_distance(point1, point2):
             return np.linalg.norm(point1 - point2)
-        def nearest_neightbor(data_points, query_point):
-            return min(data_points, key=lambda x: euclidean_distance(x[0], query_point))
+        def index_pinky_distance(point1, point2):
+            return np.abs((point1[2] - point1[5]) * 0.9 - (point2[2] - point2[5]))
+        def nearest_neightbor(data_points, query_point, distance_metric):
+            return min(data_points, key=lambda x: distance_metric(x[0], query_point))
         
         data = []
         for name, pose in self.name_to_pose.items():
+            if name not in self.types[type]:
+                continue
             data.append((self.get_joint_angles(name), name))
 
-        return nearest_neightbor(data, joint_angles)
+        if type == 'none' or type == 'open':
+            return nearest_neightbor(data, joint_angles + self.offset, euclidean_distance)
+        return nearest_neightbor(data, joint_angles + self.offset, index_pinky_distance)
     
-    def sequence_map_to_primitive(self, joint_angles_list):
+    def sequence_map_to_primitive(self, joint_angles_list, type='none'):
         def remove_outliers_mahalanobis(points):
             points = np.array(points)
             covariance_matrix = np.cov(points, rowvar=False)
@@ -82,7 +101,7 @@ class GraspPrimitive:
             # Iterate over each anchor
             for anchor in anchors:
                 # Calculate the total distance from all points to this anchor
-                total_distance = sum(np.linalg.norm(np.array(point) - np.array(anchor[0])) for point in points)
+                total_distance = sum(np.linalg.norm(np.array(point + self.offset) - np.array(anchor[0])) for point in points)
                 
                 # If this total distance is less than the current minimum, update
                 if total_distance < min_distance:
@@ -97,7 +116,7 @@ class GraspPrimitive:
             best_anchor = (None, None)
 
             for anchor in anchors:
-                distances = [np.linalg.norm(point - anchor[0]) for point in points]
+                distances = [np.linalg.norm(point + self.offset - anchor[0]) for point in points]
                 median_distance = np.median(distances)
                 if median_distance < min_median_distance:
                     min_median_distance = median_distance
@@ -107,12 +126,14 @@ class GraspPrimitive:
         def find_mode_anchor(points, anchors):
             votes = []
             for point in points:
-                votes.append(self.point_map_to_primitive(point)[1])
+                votes.append(self.point_map_to_primitive(point, type=type)[1])
             mode = max(set(votes), key=votes.count)
             return (self.get_joint_angles(mode), mode)
 
         anchors = []
         for name, pose in self.name_to_pose.items():
+            if name not in self.types[type]:
+                continue
             anchors.append((self.get_joint_angles(name), name))
 
         # points = remove_outliers_mahalanobis(joint_angles_list)
@@ -173,3 +194,11 @@ class GraspPrimitive:
             ret[name] = [thumb0, thumb, index, middle, ring, pinky]
         
         return ret
+
+if __name__ == '__main__':
+    names = ['small_diameter', 'palmar_pinch', 'palm', 'ready']
+    res = {}
+    grasp = GraspPrimitive()
+    for name in names:
+        res[name] = grasp.get_joint_angles(name)
+    print(res)

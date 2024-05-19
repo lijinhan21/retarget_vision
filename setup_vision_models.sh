@@ -1,18 +1,18 @@
 cd third_party
 
-git clone git@github.com:hkchengrex/XMem.git
+# git clone git@github.com:hkchengrex/XMem.git
 
-cd XMem
+# cd XMem
 
-# inside third_party/XMem/
-bash scripts/download_models_demo.sh
+# # inside third_party/XMem/
+# bash scripts/download_models_demo.sh
 
-# back to third_party/
-cd ..
+# # back to third_party/
+# cd ..
 
-mkdir xmem_checkpoints
+# mkdir xmem_checkpoints
 
-mv XMem/saves/*pth xmem_checkpoints/
+# mv XMem/saves/*pth xmem_checkpoints/
 
 # Cutie, as a replacement of XMem
 git clone https://github.com/hkchengrex/Cutie.git
@@ -34,7 +34,8 @@ cd ..
 git clone git@github.com:ddshan/hand_object_detector.git
 cd hand_object_detector
 pip install -r requirements.txt
-cd lib & pip install -e .
+cd lib
+pip install -e .
 cd ..
 mkdir /models/res101_handobj_100K
 cd /models/res101_handobj_100K
@@ -59,4 +60,4 @@ pip install -e .
 cd ..
 mkdir sam_checkpoints
 cd sam_checkpoints
-wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth

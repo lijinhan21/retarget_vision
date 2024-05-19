@@ -46,7 +46,7 @@ class R3DDatasetConverter:
         rotate=False,
         front_camera=False,
         cut_head=0,
-        cut_tail=10,
+        cut_tail=0,
     ):
         self.filepath = filepath
         self.camera_name = camera_name
@@ -61,7 +61,7 @@ class R3DDatasetConverter:
             folder = self.filepath[:-4]
 
         filename = folder.split("/")[-1]
-        target_size = (640, 480) 
+        target_size = (480, 640) # horizontal (640, 480) vertical (480, 640) 
         scale_w, scale_h = (
             (1.0, 1.0)
         )
@@ -90,10 +90,10 @@ class R3DDatasetConverter:
             for color_file in sorted_color_files:
                 color_img = np.ascontiguousarray(cv2.imread(color_file)[..., ::-1])
 
-                if color_img.shape[0] > target_size[0]:
-                    color_img = np.ascontiguousarray(
-                        cv2.resize(color_img, target_size, interpolation=cv2.INTER_AREA)
-                    )
+                # if color_img.shape[0] > target_size[0]:
+                #     color_img = np.ascontiguousarray(
+                #         cv2.resize(color_img, target_size, interpolation=cv2.INTER_AREA)
+                #     )
 
                 color_seq.append(color_img)
                 cv2.imwrite(color_file, color_img)
@@ -103,7 +103,10 @@ class R3DDatasetConverter:
                 color_seq = np.rot90(color_seq, k=3, axes=(1, 2))
             obs_grp = ep_grp.create_group("obs")
 
-            color_seq = color_seq[self.cut_head : -self.cut_tail]
+            if self.cut_tail > 0:
+                color_seq = color_seq[self.cut_head : -self.cut_tail]
+            else:
+                color_seq = color_seq[self.cut_head :] 
 
             obs_grp.create_dataset("agentview_rgb", data=color_seq)
             print(f"Color shape: {color_seq.shape}")

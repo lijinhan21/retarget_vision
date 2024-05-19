@@ -25,6 +25,7 @@ from orion.utils.misc_utils import (
     plotly_draw_image_with_object_keypoints, 
     resize_image_to_same_shape, 
     get_tracked_points_annotation,
+    get_hand_object_contacts_annotation,
     get_smplh_traj_annotation, 
     get_optical_flow_annotation,
     get_first_frame_annotation, 
@@ -115,6 +116,8 @@ class HandObjectInteractionGraph:
         self.segment_end_idx = -1
         self.human_video_annotation_path = ""
 
+        self.smplh_traj = np.array([])
+
         self.retargeted_ik_traj = np.array([])
         self.grasp_type = [None, None]
 
@@ -126,6 +129,12 @@ class HandObjectInteractionGraph:
                                 human_video_annotation_path, 
                                 segment_start_idx, 
                                 segment_end_idx, 
+                                segment_idx, 
+                                retargeter,
+                                grasp_dict_l, 
+                                grasp_dict_r,
+                                calibrate_grasp,
+                                zero_pose_name,
                                 video_smplh_ratio=1.0,
                                 use_smplh=True):
         self.segment_start_idx = segment_start_idx
@@ -182,8 +191,42 @@ class HandObjectInteractionGraph:
             smplh_start_idx = self.human_node.smplh_traj.cal_idx_from_video_to_smplh(segment_start_idx)
             smplh_end_idx = self.human_node.smplh_traj.cal_idx_from_video_to_smplh(segment_end_idx + 1)
             self.human_node.add_smplh_traj(smplh_traj[smplh_start_idx:smplh_end_idx])
+
+            self.smplh_traj = self.human_node.smplh_traj.smplh_traj
+
             print("video_idx=", segment_start_idx, segment_end_idx)
             print("smplh_idx=", smplh_start_idx, smplh_end_idx)
+
+            type_l = 'none'
+            type_r = 'none'
+            hand_object_contacts = get_hand_object_contacts_annotation(human_video_annotation_path)[segment_idx]
+            type_l = 'close' if (hand_object_contacts['left']['contact_type'] == 'portable') else 'open'
+            type_r = 'close' if (hand_object_contacts['right']['contact_type'] == 'portable') else 'open'
+            self.hand_type = [type_l, type_r]
+
+            # calculate grasp type
+            self.get_grasp_type(grasp_dict_l, grasp_dict_r, type_l, type_r, calibrate_grasp, zero_pose_name, retargeter)
+    
+    def get_grasp_type(self, grasp_dict_l, grasp_dict_r, type_l, type_r, calibrate_grasp, zero_pose_name, retargeter):
+        res = []
+
+        actuator_idxs = np.array([0, 1, 8, 10, 4, 6])
+
+        for i in range(len(self.smplh_traj)):
+            retargeted_traj, _, __ = retargeter.retarget(self.smplh_traj[i])
+            res.append(retargeted_traj)
+        res = np.array(res)
+        
+        
+        if calibrate_grasp:
+            hand_primitive_l = (grasp_dict_l.get_joint_angles(zero_pose_name), zero_pose_name)
+            hand_primitive_r = (grasp_dict_r.get_joint_angles(zero_pose_name), zero_pose_name)
+        else:
+            hand_primitive_l = grasp_dict_l.sequence_map_to_primitive(res[:, 13 + actuator_idxs], type=type_l)
+            hand_primitive_r = grasp_dict_r.sequence_map_to_primitive(res[:, 32 + actuator_idxs], type=type_r)
+        
+        self.grasp_type = [hand_primitive_l[1], hand_primitive_r[1]]
+        print("grasp type=", self.grasp_type)
 
     def get_representative_images(self, num_images=5):
         img_idx = np.linspace(self.segment_start_idx, self.segment_end_idx, num_images, dtype=int)
@@ -197,17 +240,21 @@ class HandObjectInteractionGraph:
         
         num_key_steps = num_waypoints + 2
         key_smplh_idx = np.linspace(0, num_frames-1, num_key_steps, dtype=int)
-        key_smplh_traj = [smplh_traj[idx] for idx in key_smplh_idx]
+        print("key smplh idx", key_smplh_idx)
 
+        # calculated retargeted ik traj for the whole trajectory, to ensure the results of ik is reasonable
+        all_retargeted_traj = []
+        for i in range(num_frames):
+            retargeted_traj, _, __ = retargeter.retarget(smplh_traj[i], offset=offset)
+            all_retargeted_traj.append(retargeted_traj.copy())
+        # extract key retargeted traj using key idx
+        key_retargeted_traj = np.array([all_retargeted_traj[idx] for idx in key_smplh_idx])
+
+        # interpolate between key retargeted traj
         if interpolation_steps == -1:
-            interpolation_steps = min(int(num_frames // num_key_steps) * 3, 40)
+            interpolation_steps = min(int(num_frames // num_key_steps) * 3, 30)
         interpolator = Interpolator(interpolation_type)
-        
-        key_retargeted_traj = []
-        for i in range(num_key_steps):
-            retargeted_traj, _, __ = retargeter.retarget(key_smplh_traj[i], offset=offset)
-            key_retargeted_traj.append(retargeted_traj.copy())
-        key_retargeted_traj = np.array(key_retargeted_traj)
+        print("interpolation steps", interpolation_steps)
 
         res = []
         for i in range(num_key_steps - 1):
@@ -216,9 +263,13 @@ class HandObjectInteractionGraph:
 
         self.retargeted_ik_traj = np.array(res)
         return self.retargeted_ik_traj
-    
+
     def get_retargeted_ik_traj_with_grasp_primitive(self,
                                                     retargeter,
+                                                    grasp_dict_l,
+                                                    grasp_dict_r,
+                                                    calibrate_grasp,
+                                                    zero_pose_name,
                                                     offset={"link_RArm7": [0, 0, 0]},
                                                     num_waypoints=0,
                                                     interpolation_steps=-1,
@@ -228,17 +279,21 @@ class HandObjectInteractionGraph:
         
         num_key_steps = num_waypoints + 2
         key_smplh_idx = np.linspace(0, num_frames-1, num_key_steps, dtype=int)
-        key_smplh_traj = [smplh_traj[idx] for idx in key_smplh_idx]
+        print("key smplh idx", key_smplh_idx)
 
+        # calculated retargeted ik traj for the whole trajectory, to ensure the results of ik is reasonable
+        all_retargeted_traj = []
+        for i in range(num_frames):
+            retargeted_traj, _, __ = retargeter.retarget(smplh_traj[i], offset=offset)
+            all_retargeted_traj.append(retargeted_traj.copy())
+        # extract key retargeted traj using key idx
+        key_retargeted_traj = np.array([all_retargeted_traj[idx] for idx in key_smplh_idx])
+
+        # interpolate between key retargeted traj
         if interpolation_steps == -1:
-            interpolation_steps = min(int(num_frames // num_key_steps) * 3, 40)
+            interpolation_steps = min(int(num_frames // num_key_steps) * 3, 30)
         interpolator = Interpolator(interpolation_type)
-        
-        key_retargeted_traj = []
-        for i in range(num_key_steps):
-            retargeted_traj, _, __ = retargeter.retarget(key_smplh_traj[i], offset=offset)
-            key_retargeted_traj.append(retargeted_traj.copy())
-        key_retargeted_traj = np.array(key_retargeted_traj)
+        print("interpolation steps", interpolation_steps)
 
         res = []
         for i in range(num_key_steps - 1):
@@ -247,10 +302,25 @@ class HandObjectInteractionGraph:
         res = np.array(res)
 
         # calculate grasp primitive
-        grasp_dict = GraspPrimitive()
         actuator_idxs = np.array([0, 1, 8, 10, 4, 6])
-        hand_primitive_l = grasp_dict.sequence_map_to_primitive(res[:, 13 + actuator_idxs])
-        hand_primitive_r = grasp_dict.sequence_map_to_primitive(res[:, 32 + actuator_idxs])
+        # if calibrate_grasp:
+        #     grasp_dict_l.calibrate(res[0, 13 + actuator_idxs], zero_pose_name)
+        #     grasp_dict_r.calibrate(res[0, 32 + actuator_idxs], zero_pose_name)
+        # hand_primitive_l = grasp_dict_l.sequence_map_to_primitive(res[:, 13 + actuator_idxs])
+        # hand_primitive_r = grasp_dict_r.sequence_map_to_primitive(res[:, 32 + actuator_idxs])
+        
+        # Hack: let first frame hand pose be zero pose; other frame use nn to determine
+        if calibrate_grasp:
+            # calibrate (set offset). can be commented!
+            # grasp_dict_l.calibrate(res[0, 13 + actuator_idxs], zero_pose_name)
+            # grasp_dict_r.calibrate(res[0, 32 + actuator_idxs], zero_pose_name)
+
+            hand_primitive_l = (grasp_dict_l.get_joint_angles(zero_pose_name), zero_pose_name)
+            hand_primitive_r = (grasp_dict_r.get_joint_angles(zero_pose_name), zero_pose_name)
+        else:
+            hand_primitive_l = grasp_dict_l.sequence_map_to_primitive(res[:, 13 + actuator_idxs])
+            hand_primitive_r = grasp_dict_r.sequence_map_to_primitive(res[:, 32 + actuator_idxs])
+        
         res[:, 13 + actuator_idxs] = np.tile(hand_primitive_l[0], (res.shape[0], 1))
         res[:, 32 + actuator_idxs] = np.tile(hand_primitive_r[0], (res.shape[0], 1))
         print("primitive for left right hand is", hand_primitive_l[1], hand_primitive_r[1])

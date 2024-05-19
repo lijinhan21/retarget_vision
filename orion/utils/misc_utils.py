@@ -59,8 +59,15 @@ def get_smplh_traj_annotation(annotation_path):
         results = pickle.load(f)
     return results
 
+def get_object_names_from_annotation(annotation_path):
+    with open(os.path.join(annotation_path, "text_description.json"), "r") as f:
+        text_description = json.load(f)["objects"]
+    return text_description
+
 def get_hand_object_contacts_annotation(annotation_path):
-    pass
+    with open(os.path.join(annotation_path, "hand_object_contacts.json"), "r") as f:
+        hand_object_contacts = json.load(f)
+    return hand_object_contacts
 
 def get_optical_flow_annotation(annotation_path):
     results = torch.load(os.path.join(annotation_path, "dense_trajs.pt"))
@@ -1004,6 +1011,7 @@ def load_multiple_frames_from_human_hdf5_dataset(
 ):
     with h5py.File(dataset_name, "r") as dataset:
         dataset_length = len(dataset[f"data/human_demo/obs/{image_name}"])
+        # print("dataset length = ", dataset_length, dataset[f"data/human_demo/obs/{image_name}"].shape)
         frame_ids = np.linspace(0, dataset_length - 1, num_frames).astype(int)
         images = []
         for frame_id in frame_ids:
@@ -1244,3 +1252,15 @@ def finish_experiments(runtime_folder, rollout_folder, human_video_annotation_fo
                      "rollout_folder": rollout_folder,
                    }, f)
     ORION_LOGGER.info(f"Writing {runtime_folder}/info.json")
+
+def convert_to_json_serializable(data):
+    if isinstance(data, np.ndarray):
+        return data.tolist()
+    elif isinstance(data, torch.Tensor):
+        return data.cpu().detach().numpy().tolist()
+    elif isinstance(data, dict):
+        return {key: convert_to_json_serializable(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [convert_to_json_serializable(item) for item in data]
+    else:
+        return data

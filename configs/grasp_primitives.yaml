@@ -16,6 +16,11 @@ finger_config:
   folded: 75
   tucked: 90
 
+types:
+  none: [small_diameter, palmar_pinch, ready, palm]
+  open: [ready, palm]
+  close: [small_diameter, palmar_pinch]
+
 grasp_primitives:
 
   # large_diameter:
@@ -42,29 +47,29 @@ grasp_primitives:
     ring: extend
     pinky: extend
 
-  prismatic_finger:
-    thumb0: in
-    thumb: slightly_bent
-    index: bent
-    middle: bent
-    ring: tucked
-    pinky: tucked
+  # prismatic_finger:
+  #   thumb0: in
+  #   thumb: slightly_bent
+  #   index: bent
+  #   middle: bent
+  #   ring: tucked
+  #   pinky: tucked
 
-  quadpod:
-    thumb0: in
-    thumb: slightly_bent
-    index: slightly_bent
-    middle: slightly_bent
-    ring: slightly_bent
-    pinky: extend
+  # quadpod:
+  #   thumb0: in
+  #   thumb: slightly_bent
+  #   index: bent
+  #   middle: slightly_bent
+  #   ring: bent
+  #   pinky: extend
 
-  light_tool:
-    thumb0: out
-    thumb: slightly_bent
-    index: tucked
-    middle: tucked
-    ring: tucked
-    pinky: tucked
+  # light_tool:
+  #   thumb0: out
+  #   thumb: slightly_bent
+  #   index: tucked
+  #   middle: tucked
+  #   ring: tucked
+  #   pinky: tucked
 
   # precision_disk:
   #   thumb0: out

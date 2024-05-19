@@ -21,7 +21,8 @@ def main():
     # TODO: save the normalized smplh_traj to os.path.join(args.annotation_folder, "smplh_traj.pkl") 
 
     # temporary: copy args.smplh_path in side args.annotation_folder
-    os.system(f'''cp {args.smplh_path} {os.path.join(args.annotation_folder, "smplh_traj.pkl")}''')
+    smplh_path = os.path.join('datasets/smplh', args.smplh_path)
+    os.system(f'''cp {smplh_path} {os.path.join(args.annotation_folder, "smplh_traj.pkl")}''')
 
 if __name__ == "__main__":
     main()

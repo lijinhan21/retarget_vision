@@ -193,7 +193,7 @@ class HandObjectDetector:
             if vis:
                 # visualization
                 im2show = vis_detections_filtered_objects_PIL(im2show, obj_dets, hand_dets, thresh_hand, thresh_obj, font_path='third_party/hand_object_detector/lib/model/utils/times_b.ttf')
-                print("hand_dets: ", hand_dets)
+                # print("hand_dets: ", hand_dets)
 
                 folder_name = save_path
                 os.makedirs(folder_name, exist_ok=True)

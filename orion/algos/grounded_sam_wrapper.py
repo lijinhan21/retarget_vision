@@ -112,6 +112,7 @@ class GroundedSamWrapper:
 
     def segment(self, image_np, prompts, box_threshold=0.3, text_threshold=0.25, filter_threshold=200):
         image_source, image = self.transform(image_np)
+
         prompt_text = ""
         for prompt in prompts:
             prompt_text += (prompt + ".")
@@ -125,6 +126,7 @@ class GroundedSamWrapper:
         )
 
         if boxes.shape[0] == 0:
+            print("no boxes found!")
             return np.array([])
 
            

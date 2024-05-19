@@ -5,6 +5,7 @@ import cv2
 import sys
 import json
 
+from PIL import Image
 import numpy as np
 import argparse
 import shutil
@@ -59,6 +60,14 @@ def main():
 
     final_mask_image = wrapper.segment(first_frame, text_description)
     os.makedirs(os.path.join(tmp_path, "masks"), exist_ok=True)
+
+    if isinstance(final_mask_image, np.ndarray):
+        print("final_mask_image is a numpy array")
+    #     # 如果 final_mask_image 是一个 NumPy 数组，则将其转换为 PIL Image 对象
+        final_mask_image = Image.fromarray(final_mask_image)
+    if final_mask_image.mode == 'F':
+        final_mask_image = final_mask_image.convert('RGB')
+
     final_mask_image.save(os.path.join(tmp_path, "masks", "frame.png"))
     overlay_image = overlay_xmem_mask_on_image(first_frame, np.array(final_mask_image), use_white_bg=True, rgb_alpha=0.3)
     print("overlay_image generate ok!")
@@ -85,7 +94,7 @@ def main():
         config_dict["text"] = text_description
         json.dump(config_dict, f)
     # remove the folder
-    shutil.rmtree(tmp_path)
+    # shutil.rmtree(tmp_path)
 
 
 if __name__ == "__main__":
