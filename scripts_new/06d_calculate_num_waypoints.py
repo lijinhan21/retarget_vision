@@ -21,8 +21,8 @@ You need to choose from 'Whole Trajectory' or 'Target Only'. Your output format 
 {
     "Answer": YOUR_CHOICE('Target Only' or 'Whole Trajectory'),
 }
-Reasons: YOUR_REASONS
 ```
+Reasons: YOUR_REASONS
 
 Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing commas, no single quotes, etc. 
 Note that you shouldn't output 'Whole Trajectory' unless you are absolutely sure. Don't make any guesses, and only focus on the motion shown in images!
