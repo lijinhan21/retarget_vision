@@ -36,11 +36,16 @@ def parse_args():
     return parser.parse_args()
 
 def identify_objects_prompt():
-    prompt = '''You need to analyze what the human is doing in the images, then identify the objects of interest. They are likely the objects manipulated by human or near human. 
-Note that there are likely to have some irrelevant objects in the scene, you need to determine what the man is doing and extract only the relevent objects. The number of relevent objects of interest are typically less than 4.
+    prompt = '''You need to analyze what the human is doing in the images, then tell me:
+1. All the objects in front scene (mostly on the table). You should ignore the background objects.
+2. The objects of interest. They should be a subset of your answer to the first question. 
+They are likely the objects manipulated by human or near human. Note that there are irrelevant objects in the scene, such as objects that does not move at all. You should ignore the irelevant objects.
+
 Your output format is:
 
-The human is xxx. The objects of interest are:
+The human is xxx. 
+All objects are xxx.
+The objects of interest are:
 ```json
 {
     "objects": ["OBJECT1", "OBJECT2", ...],

@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 
 import init_path
 from orion.utils.misc_utils import *
-from orion.algos.hoig import HandObjectInteractionGraph
-from orion.algos.human_video_hoig import HumanVideoHOIG
 
 def main():
     parser = argparse.ArgumentParser(description='Process annotation and detect changepoints.')

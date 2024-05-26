@@ -65,8 +65,152 @@ class HumanVideoHOIG:
                                          video_smplh_ratio=video_smplh_ratio,
                                          use_smplh=use_smplh)
             self.hoigs.append(hoig)
+
+        # get reference object and manipulate object names
+
+
         print("generated HOIGs from human video, total_num=", len(self.hoigs), self.temporal_segments)
     
+    def get_graph(self, idx):
+        return self.hoigs[idx]
+    
+    @property
+    def num_graphs(self):
+        return len(self.hoigs)
+
+    def plan_inference(self, velocity_threshold=1., target_dist_threshold=0.01, target_intersection_threshold=1000):
+        """This is a function to infer the important information in a plan. Specifically, we will get the following information from this function: 
+            1. OOG mode sequence, which specifies the interaction mode (freespace, move with gripper closed, move with gripper open)
+            2. Manipulate object sequence, which specifies the object that the robot should manipulate in each step
+            3. Reference object sequence, which specifies the object that the robot should use as reference in each step
+
+            -1 in the object sequence means that no object is selected for manipulation or reference.
+        Args:
+            velocity_threshold (_type_, optional): _description_. Defaults to 1..
+
+        Returns:
+            _type_: _description_
+        """
+        for graph_id in range(self.num_graphs):
+            graph_in_query = self.get_graph(graph_id)
+            ORION_LOGGER.debug(f"Current graph: {graph_id}")
+
+            # graph_in_query.draw_scene_3d(draw_trajs=True)
+            candidate_objects_to_move = []
+            v_mean_list = []
+            v_std_list = []
+            for object_id in graph_in_query.object_ids:
+                point_nodes = graph_in_query.select_point_nodes(object_ids=[object_id])
+                points = graph_in_query.get_point_list(point_nodes=point_nodes)
+                # print("object_id: ", object_id, " | points: ", graph_in_query.object_nodes[object_id-1].points)
+                # world_trajs =  graph_in_query.get_world_trajs(object_ids=[object_id])
+                world_trajs = graph_in_query.get_pixel_trajs(object_ids=[object_id])
+                all_visibilities = graph_in_query.get_visibility_trajs(object_ids=[object_id])
+                # print(world_trajs.shape, all_visibilities.shape)
+                traj_diff = world_trajs[:, 1:, :] - world_trajs[:, :-1, :]
+                # traj_diff = world_trajs[:, 1:, :] - world_trajs[:, :1, :]
+                confidence = all_visibilities[:, 1:] * all_visibilities[:, :-1]
+
+                traj_diff = traj_diff * confidence[:, :, None]
+                # print(traj_diff.shape, confidence.shape)
+                # v_mean = np.mean(np.sum((np.linalg.norm(traj_diff, axis=-1)), axis=1) / traj_diff.shape[1], axis=0) 
+                # v_std = np.std(np.sum((np.linalg.norm(traj_diff, axis=-1)), axis=1) / traj_diff.shape[1], axis=0)
+                v_mean = np.mean(np.linalg.norm(traj_diff, axis=-1))
+                v_std = np.std(np.linalg.norm(traj_diff, axis=-1))
+
+                ORION_LOGGER.debug(f"object_id: {object_id} | v:  {v_mean} | v_std: {v_std}")
+
+                if v_mean > velocity_threshold:
+                    v_mean_list.append(v_mean)
+                    v_std_list.append(v_std)
+                    candidate_objects_to_move.append(object_id)
+            if len(candidate_objects_to_move) == 0:
+                graph_in_query.set_oog_mode(OOGMode.FREE_MOTION)
+            else:
+                if (len(candidate_objects_to_move) == 1) or (np.std(v_mean_list) < 0.1):
+                    graph_in_query.set_manipulate_object_id(candidate_objects_to_move[0])
+                else:
+                    # sort candidate objects to move by v_mean
+                    candidate_objects_to_move = [x for _, x in sorted(zip(v_mean_list, candidate_objects_to_move))]
+                    graph_in_query.set_manipulate_object_id(candidate_objects_to_move[-1])
+
+            pcd_list = []
+            for object_id in graph_in_query.object_ids:
+                pcd_array, _ = graph_in_query.get_objects_3d_points(object_id=object_id,
+                                                                            filter=False)
+                pcd = create_o3d_from_points_and_color(pcd_array)
+                pcd_list.append(pcd)
+
+            dists = []
+            contact_states = []
+
+            dist_threshold = target_dist_threshold
+            intersection_threshold = target_intersection_threshold
+            max_intersection = 0
+
+            dists = []
+            contact_states = []
+
+            objects_in_contact = []
+            for i in range(len(pcd_list)):
+                for j in range(i+1, len(pcd_list)):
+                    dists = pcd_list[i].compute_point_cloud_distance(pcd_list[j])
+                    intersections = [d for d in dists if d < dist_threshold]
+                    # print(i+1, ", ", j+1, " | ", len(intersections))
+                    if len(intersections) > intersection_threshold:
+                        contact_states.append((i+1, j+1))
+                        objects_in_contact.append(i+1)
+                        objects_in_contact.append(j+1)
+
+            objects_in_contact = list(set(objects_in_contact))
+            if graph_id > 0:
+                prev_graph = self.get_graph(graph_id - 1)
+                if len(prev_graph.contact_states) > 0:
+                    for contact_state in prev_graph.contact_states:
+                        if contact_state[0] not in objects_in_contact and contact_state[1] not in objects_in_contact:
+                            contact_states.append(contact_state)
+
+            
+            graph_in_query.contact_states = contact_states
+
+            ORION_LOGGER.debug(f"contact_states: {graph_in_query.contact_states}")
+            if graph_in_query.get_manipulate_object_id() > 0:
+                manipulate_object_id = graph_in_query.get_manipulate_object_id()
+                if len(contact_states) > 0:
+
+                    for contact_state in contact_states:
+                        if manipulate_object_id in contact_state:
+                            temp_contact_state = list(contact_state)
+                            temp_contact_state.remove(manipulate_object_id)
+                            graph_in_query.set_reference_object_id(temp_contact_state[0])
+                            break
+                graph_in_query.decide_gripper_action()
+            # TODO: decide the reference object
+        # decide reference objects between a pair of graphs
+        for graph_id in range(self.num_graphs - 1):
+            current_graph = self.get_graph(graph_id)
+            next_graph = self.get_graph(graph_id + 1)
+            contact_states = graph_in_query.contact_states
+            if current_graph.get_manipulate_object_id() > 0:
+                contact_states = next_graph.contact_states
+                manipulate_object_id = current_graph.get_manipulate_object_id()
+                if len(contact_states) > 0:
+                    for contact_state in contact_states:
+                        if manipulate_object_id in contact_state:
+                            temp_contact_state = list(contact_state)
+                            temp_contact_state.remove(manipulate_object_id)
+                            current_graph.set_reference_object_id(temp_contact_state[0])
+                            break
+        if not self.check_graph_contact_equal(self.num_graphs-2, self.num_graphs-1):
+            current_graph = self.get_graph(self.num_graphs-2)
+            next_graph = self.get_graph(self.num_graphs-1)        
+            current_graph.contact_states = next_graph.contact_states
+        return {
+            "oog_mode_seq": self.get_oog_mode_sequence(),
+            "manipulate_object_seq": self.get_manipulate_object_seq(),
+            "reference_object_seq": self.get_reference_object_seq(),
+        }
+
     def get_retargeted_ik_traj(self, 
                                offset={"link_RArm7": [0, 0, 0]}, 
                                interpolation_steps=-1,
@@ -174,6 +318,7 @@ class HumanVideoHOIG:
                 'waypoint_info': self.waypoints_info[idx],
                 'grasp_type': self.hoigs[idx].grasp_type,
                 'hand_type': self.hoigs[idx].hand_type,
+                'moving_arm': self.hoigs[idx].moving_arm,
                 'smplh_traj': convert_to_json_serializable(self.hoigs[idx].smplh_traj),
                 'objects': self.object_names
             }))

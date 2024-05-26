@@ -120,6 +120,66 @@ class HandObjectInteractionGraph:
 
         self.retargeted_ik_traj = np.array([])
         self.grasp_type = [None, None]
+        self.moving_arm = None
+
+        self.camera_extrinsics = np.eye(4)
+        self.camera_intrinsics = np.array([
+            [909.83630371,   0.        , 651.97015381],
+            [  0.        , 909.12280273, 376.37097168],
+            [  0.        ,   0.        ,   1.        ],
+        ])
+
+    def get_pixel_trajs(self, object_ids=[]):
+        if len(object_ids) == 0:
+            object_ids = self.object_ids
+        selected_point_nodes = self.select_point_nodes(object_ids=object_ids)
+        pixel_trajs = []
+        for point_node in selected_point_nodes:
+            pixel_trajs.append(point_node.tracked_pixel_traj)
+        return np.stack(pixel_trajs, axis=0)
+    
+    def get_visibility_trajs(self, object_ids=[]):
+        if len(object_ids) == 0:
+            object_ids = self.object_ids
+        selected_point_nodes = self.select_point_nodes(object_ids=object_ids)
+        visibility = []
+        for point_node in selected_point_nodes:
+            visibility.append(point_node.tracked_visibility_traj)
+        return np.stack(visibility, axis=0)
+
+    def get_point_list(self, point_nodes=None, mode="pixel"):
+        if point_nodes is None:
+            # use all point nodes if not specified
+            point_nodes = self.point_nodes
+        point_list = []
+        for point_node in point_nodes:
+            if mode == "pixel":
+                point_list.append(point_node.pixel_point)
+            elif mode == "world":
+                point_list.append(point_node.world_point)
+        return point_list
+
+    def select_point_nodes(self, object_ids=[]):
+        selected_point_nodes = []
+        for point_node in self.point_nodes:
+            if point_node.object_id in object_ids:
+                selected_point_nodes.append(point_node)
+        return selected_point_nodes
+    
+    def get_points_by_objects(self, object_ids=[], mode="pixel"):
+        point_nodes = self.select_point_nodes(object_ids=object_ids)
+        return self.get_point_list(point_nodes=point_nodes, mode=mode)
+
+    def set_pixel_trajs(self, pixel_trajs):
+        assert(pixel_trajs.shape[0] == len(self.point_nodes)), "Number of points must be the same"
+        for i, point_node in enumerate(self.point_nodes):
+            point_node.tracked_pixel_traj = pixel_trajs[i]
+
+    def set_visibility_trajs(self, visibility_traj):
+        assert(visibility_traj.shape[0] == len(self.point_nodes)), "Number of points must be the same"
+        for i, point_node in enumerate(self.point_nodes):
+            point_node.tracked_visibility_traj = visibility_traj[i]
+            point_node.tracked_visibility = visibility_traj[i][0]
 
     @property
     def segment_length(self):
@@ -181,6 +241,22 @@ class HandObjectInteractionGraph:
                 self.point_nodes.append(point_node)
                 point_idx += 1
 
+        # Add trajectory for point nodes
+        pixel_trajs = tap_results["pred_tracks"].squeeze().permute(1, 0, 2).detach().cpu().numpy()
+        # get the visibility of point trajectories
+        visibility = tap_results["pred_visibility"].squeeze().permute(1, 0).detach().cpu().numpy()
+
+        pixel_trajs = pixel_trajs[:, segment_start_idx:segment_end_idx]
+        visibility = visibility[:, segment_start_idx:segment_end_idx]
+        self.set_pixel_trajs(pixel_trajs)
+        self.set_visibility_trajs(visibility)
+
+        depth_seg_seq = get_depth_seq_from_human_demo(human_demo_dataset_name, start_idx=segment_start_idx, end_idx=segment_end_idx)
+        world_trajs = self.compute_world_trajs(pixel_trajs, depth_seg_seq, self.camera_intrinsics, self.camera_extrinsics)
+
+
+        print("set points trajectory ok!")
+
         # TODO: add object point clouds
 
         # create human node
@@ -206,14 +282,56 @@ class HandObjectInteractionGraph:
 
             # calculate grasp type
             self.get_grasp_type(grasp_dict_l, grasp_dict_r, type_l, type_r, calibrate_grasp, zero_pose_name, retargeter)
+
+            # identify main moving arm in this step
+            self.identify_moving_arm(retargeter)
     
+    def identify_moving_arm(self, retargeter):
+        L_targets = []
+        R_targets = []
+        for i in range(len(self.smplh_traj)):
+            targets = retargeter.get_targets_from_smplh(self.smplh_traj[i])
+            L_targets.append(targets['link_LArm7'][:3, 3])
+            R_targets.append(targets['link_RArm7'][:3, 3])
+
+        L_targets = np.array(L_targets)
+        R_targets = np.array(R_targets)
+
+        L_diff = np.linalg.norm(L_targets[1:] - L_targets[:-1], axis=1)
+        R_diff = np.linalg.norm(R_targets[1:] - R_targets[:-1], axis=1)
+
+        L_diff = np.mean(L_diff)
+        R_diff = np.mean(R_diff)
+
+        print("L_diff=", L_diff, "R_diff=", R_diff)
+
+        cur_len = len(self.smplh_traj)
+        while abs(L_diff - R_diff) < 0.006:
+            # most likely both arms are moving. Then we need to identify the arm is moves in the latter part of the trajectory
+            cur_len = int(cur_len * 0.5)
+            L_diff = np.linalg.norm(L_targets[-(cur_len - 1):] - L_targets[-cur_len: -1], axis=1)
+            R_diff = np.linalg.norm(R_targets[-(cur_len - 1):] - R_targets[-cur_len: -1], axis=1)
+
+            L_diff = np.mean(L_diff)
+            R_diff = np.mean(R_diff)
+
+            print("cur_len=", cur_len, "L_diff=", L_diff, "R_diff=", R_diff)
+        
+        if L_diff > R_diff:
+            self.moving_arm = 'L'
+        else:
+            self.moving_arm = 'R'
+
+        print("moving arm is", self.moving_arm)
+
     def get_grasp_type(self, grasp_dict_l, grasp_dict_r, type_l, type_r, calibrate_grasp, zero_pose_name, retargeter):
         res = []
 
         actuator_idxs = np.array([0, 1, 8, 10, 4, 6])
 
         for i in range(len(self.smplh_traj)):
-            retargeted_traj, _, __ = retargeter.retarget(self.smplh_traj[i])
+            # retargeted_traj, _, __ = retargeter.retarget(self.smplh_traj[i])
+            retargeted_traj = retargeter.retarget(self.smplh_traj[i])
             res.append(retargeted_traj)
         res = np.array(res)
         

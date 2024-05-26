@@ -1,13 +1,6 @@
 import argparse
 import numpy as np
 import os
-import ruptures as rpt
-import matplotlib.pyplot as plt
-
-from easydict import EasyDict
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
 
 import init_path

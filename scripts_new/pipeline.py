@@ -25,7 +25,9 @@ def main():
     ]
     command = " ".join(commands)                                    
     os.system(command)
-    
+
+    # exit(0)
+
     # 2. gam annotation
     print("*************GAM Annotation*************")
     commands = [

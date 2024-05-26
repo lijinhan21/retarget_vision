@@ -37,8 +37,8 @@ pip install -r requirements.txt
 cd lib
 pip install -e .
 cd ..
-mkdir /models/res101_handobj_100K
-cd /models/res101_handobj_100K
+mkdir /models/res101_handobj_100K/pascal_voc
+cd /models/res101_handobj_100K/pascal_voc
 wget https://drive.google.com/open?id=1H2tWsZkS7tDF8q1-jdjx6V9XrK25EDbE
 cd ../../..
 
