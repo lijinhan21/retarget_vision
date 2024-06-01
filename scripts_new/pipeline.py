@@ -26,8 +26,6 @@ def main():
     command = " ".join(commands)                                    
     os.system(command)
 
-    # exit(0)
-
     # 2. gam annotation
     print("*************GAM Annotation*************")
     commands = [
@@ -38,6 +36,8 @@ def main():
     ]
     command = " ".join(commands)
     os.system(command)
+
+    exit(0)
 
     # 3. cutie segmentation
     print("*************Cutie Segmentation*************")

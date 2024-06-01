@@ -63,6 +63,9 @@ def main():
     res = []
     for i in range(len(waypoints_indices)):
         
+        res.append('Whole Trajectory')
+        continue
+
         img_paths = []
         for j in range(len(waypoints_indices[i])):
             keyframe = video_seq[waypoints_indices[i][j]]

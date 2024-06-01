@@ -95,6 +95,12 @@ def main():
     with open(os.path.join(annotation_path, "text_description.json"), "w") as f:
         vlm = GPT4V()
         text_description = identify_objects(vlm, img_paths)
+        if 'can' in text_description['objects']:
+            text_description['objects'].remove('can')
+            text_description['objects'].append('bottle')
+        if 'canister' in text_description['objects']:
+            text_description['objects'].remove('canister')
+            text_description['objects'].append('bottle')
         json.dump(text_description, f)
 
     # remove the folder

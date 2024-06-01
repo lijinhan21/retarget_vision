@@ -1125,6 +1125,23 @@ def create_point_clouds_from_keypoints(keypoints, depth_img, camera_intrinsics_m
         height, width = depth_img.shape[:2]
     x = keypoints[:, 0]
     y = keypoints[:, 1]
+
+    # x = np.clip(x, 0, width - 1)
+    # print("before clip, y=", y, y.max())
+    # # # y = np.clip(y, 0, height - 1)
+    # # new_y = y.copy()
+    # # new_y[y < 0] = 0
+    # # new_y[y >= height] = height - 1
+    # for i in range(len(y)):
+    #     print("y[i]=", y[i], "height=", height, y[i]>=height)
+    #     if y[i] >= height:
+    #         print("y[", i, "]=", y[i], "height=", height)
+    #         y[i] = height - 1
+    #         print("after: y[", i, "]=", y[i], "height=", height)
+    # t = new_y.copy()
+    # print("after clip, y=", y, y.max())
+    # print("height, width = ", height, width, x.max(), y.max())
+
     new_z = z[y.astype(np.int32), x.astype(np.int32)]
     fx = camera_intrinsics_matrix[0, 0]
     fy = camera_intrinsics_matrix[1, 1]
