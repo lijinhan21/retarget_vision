@@ -16,55 +16,55 @@ def main():
     annotation_path = os.path.join(annotation_folder, args.human_demo.split("/")[-1].split(".")[0])
 
     # 1. generate text description
-    print("*************Text Description*************")
-    commands = [
-        "python",
-        "scripts_new/01_generate_descriptions.py",
-        "--human_demo",
-        args.human_demo,
-    ]
-    command = " ".join(commands)                                    
-    os.system(command)
+    # print("*************Text Description*************")
+    # commands = [
+    #     "python",
+    #     "scripts_new/01_generate_descriptions.py",
+    #     "--human_demo",
+    #     args.human_demo,
+    # ]
+    # command = " ".join(commands)                                    
+    # os.system(command)
 
-    # 2. gam annotation
-    print("*************GAM Annotation*************")
-    commands = [
-        "python",
-        "scripts_new/02_gam_annotation.py",
-        "--human_demo",
-        args.human_demo,
-    ]
-    command = " ".join(commands)
-    os.system(command)
+    # # 2. gam annotation
+    # print("*************GAM Annotation*************")
+    # commands = [
+    #     "python",
+    #     "scripts_new/02_gam_annotation.py",
+    #     "--human_demo",
+    #     args.human_demo,
+    # ]
+    # command = " ".join(commands)
+    # os.system(command)
 
-    exit(0)
+    # exit(0)
 
-    # 3. cutie segmentation
-    print("*************Cutie Segmentation*************")
-    commands = [
-        "python",
-        "scripts_new/03b_cutie_annotation.py",
-        "--annotation-folder",
-        annotation_path
-    ]
-    command = " ".join(commands)
-    os.system(command)
+    # # 3. cutie segmentation
+    # print("*************Cutie Segmentation*************")
+    # commands = [
+    #     "python",
+    #     "scripts_new/03b_cutie_annotation.py",
+    #     "--annotation-folder",
+    #     annotation_path
+    # ]
+    # command = " ".join(commands)
+    # os.system(command)
 
-    # 4. cotracker annotation
-    print("*************Cotracker Annotation*************")
-    commands = [
-        "python",
-        "scripts_new/04_generate_cotracker_annotation.py",
-        "--annotation-folder",
-        annotation_path,
-        "--num-track-points",
-        "40",
-        "--no-depth" if args.no_depth else "",
-    ]
-    if not args.save_video:
-        commands.append("--no-video")
-    command = " ".join(commands)
-    os.system(command)
+    # # 4. cotracker annotation
+    # print("*************Cotracker Annotation*************")
+    # commands = [
+    #     "python",
+    #     "scripts_new/04_generate_cotracker_annotation.py",
+    #     "--annotation-folder",
+    #     annotation_path,
+    #     "--num-track-points",
+    #     "40",
+    #     "--no-depth" if args.no_depth else "",
+    # ]
+    # if not args.save_video:
+    #     commands.append("--no-video")
+    # command = " ".join(commands)
+    # os.system(command)
     
     # 5. tap-based temporal segmentation
     print("*************Tap Annotation*************")

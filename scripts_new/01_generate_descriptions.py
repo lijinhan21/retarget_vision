@@ -32,14 +32,14 @@ torch.set_grad_enabled(False)
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--human_demo", default="iphone_front_boat/iphone_front_boat_demo.hdf5", help="Path to a human demo file")
-    parser.add_argument("--num_frames", type=int, default=3, help="Number of frames to process")
+    parser.add_argument("--num_frames", type=int, default=8, help="Number of frames to process")
     return parser.parse_args()
 
 def identify_objects_prompt():
     prompt = '''You need to analyze what the human is doing in the images, then tell me:
 1. All the objects in front scene (mostly on the table). You should ignore the background objects.
 2. The objects of interest. They should be a subset of your answer to the first question. 
-They are likely the objects manipulated by human or near human. Note that there are irrelevant objects in the scene, such as objects that does not move at all. You should ignore the irelevant objects.
+They are likely the objects manipulated by human or have interaction with objects manipulated by human, such as serving as their containeres. Note that there are irrelevant objects in the scene, such as objects that does not move and doesn't interact with objects manipulated by human. You should ignore the irelevant objects.
 
 Your output format is:
 

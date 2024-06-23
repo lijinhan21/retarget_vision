@@ -1126,9 +1126,9 @@ def create_point_clouds_from_keypoints(keypoints, depth_img, camera_intrinsics_m
     x = keypoints[:, 0]
     y = keypoints[:, 1]
 
-    # x = np.clip(x, 0, width - 1)
+    x = np.clip(x, 0, z.shape[1] - 1)
     # print("before clip, y=", y, y.max())
-    # # # y = np.clip(y, 0, height - 1)
+    y = np.clip(y, 0, z.shape[0] - 1)
     # # new_y = y.copy()
     # # new_y[y < 0] = 0
     # # new_y[y >= height] = height - 1

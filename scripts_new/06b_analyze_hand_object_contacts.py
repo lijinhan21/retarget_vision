@@ -60,15 +60,15 @@ def main():
                 num_right[right_key] = 0
             num_left[left_key] += 1
             num_right[right_key] += 1
-        # foung bigest number of left and right hand
+        # found bigest number of left and right hand
         max_left = 0
         max_right = 0
         for key, value in num_left.items():
-            if value > max_left:
+            if value >= max_left:
                 max_left = value
                 segment_hand_info['left']['in_contact'], segment_hand_info['left']['contact_type'] = key.split('_')
         for key, value in num_right.items():
-            if value > max_right:
+            if value >= max_right:
                 max_right = value
                 segment_hand_info['right']['in_contact'], segment_hand_info['right']['contact_type'] = key.split('_')
 

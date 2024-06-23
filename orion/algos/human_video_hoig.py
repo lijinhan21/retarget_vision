@@ -185,7 +185,7 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
         print("manipulate object id", current_graph.get_manipulate_object_id(), 'name', json_data['manipulate_object_name'])
 
 
-    def plan_inference(self, velocity_threshold=0.5, target_dist_threshold=0.05, target_intersection_threshold=600):
+    def plan_inference(self, velocity_threshold=0.8, target_dist_threshold=0.05, target_intersection_threshold=600):
         """This is a function to infer the important information in a plan. Specifically, we will get the following information from this function: 
             1. Manipulate object sequence, which specifies the object that the robot should manipulate in each step
             2. Reference object sequence, which specifies the object that the robot should use as reference in each step
@@ -222,14 +222,15 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
                     v_mean_list.append(v_mean)
                     v_std_list.append(v_std)
                     candidate_objects_to_move.append(object_id)
-            if len(candidate_objects_to_move) == 0:
-                print("No moving objects found. Will try to determine the object being manipulated using hand-object contacts.")
-                graph_in_query.set_manipulate_object_id(-1)
 
-                lr = 0 if graph_in_query.moving_arm == "L" else 1
-                # if graph_in_query.hand_type[lr] == 'close': # this means that moving arm is in contact with some object. Then we assume that object is the manipu;ated object.
-                    # use vlm to try see if there is a object in contact which is being manipulated, such as a button being pressed
-                if graph_id != 0:
+                print("velocity of object", object_id, ":", v_mean, v_std)
+
+            lr = 0 if graph_in_query.moving_arm == "L" else 1
+            if len(candidate_objects_to_move) == 0:
+                if (graph_in_query.hand_type[lr] == 'open') or (graph_id == 0):
+                    graph_in_query.set_manipulate_object_id(-1)
+                else:
+                    print("No moving objects found. Will try to determine the object being manipulated using hand-object contacts.")
                     self.vlm_get_manipulate_object(graph_id)
             else:
                 if (len(candidate_objects_to_move) == 1) or (np.std(v_mean_list) < 0.1):
