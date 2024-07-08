@@ -7,8 +7,10 @@ annotations
 weights
 logs
 tmp_video
+tmp_images
 .ipynb_checkpoints
 GR1_retarget
 *.zip
 *.mp4
 *.hdf5
+_DATA

@@ -69,6 +69,11 @@ def get_hand_object_contacts_annotation(annotation_path):
         hand_object_contacts = json.load(f)
     return hand_object_contacts
 
+def get_hamer_hand_object_contacts_annotation(annotation_path):
+    with open(os.path.join(annotation_path, "hamer_hand_object_contacts.json"), "r") as f:
+        hand_object_contacts = json.load(f)
+    return hand_object_contacts
+
 def get_optical_flow_annotation(annotation_path):
     results = torch.load(os.path.join(annotation_path, "dense_trajs.pt"))
     # pred_tracks: [B, T, N, 2]

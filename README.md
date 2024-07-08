@@ -46,13 +46,26 @@ python setup.py build
 python setup.py install
 ```
 
-### Install Lietorch
+### Install HaMer
+
+Create a new conda environment to install [HaMer](https://github.com/geopavlakos/hamer) under `third_party`.
+Change line 14 of `hamer/vitpose_model.py` to the following:
+```
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+```
+
+After installing everything following HaMer's instruction, install the following packages in conda:
+```
+pip install -r requirements_hamer_extra.txt
+```
+
+<!-- ### Install Lietorch
 
 You can install the following anywhere, as long as you install it into the `orion` virtual environment.
 ```
 git clone git@github.com:princeton-vl/lietorch.git
 
-```
+``` -->
 
 ### Directory structure of `third_party`
 

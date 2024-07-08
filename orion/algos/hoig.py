@@ -26,6 +26,7 @@ from orion.utils.misc_utils import (
     resize_image_to_same_shape, 
     get_tracked_points_annotation,
     get_hand_object_contacts_annotation,
+    get_hamer_hand_object_contacts_annotation,
     get_smplh_traj_annotation, 
     get_optical_flow_annotation,
     get_first_frame_annotation, 
@@ -124,6 +125,10 @@ class HandObjectInteractionGraph:
         self.retargeted_ik_traj = np.array([])
         self.grasp_type = [None, None]
         self.moving_arm = None
+
+        self.arms_contact = [-1, -1]
+        self.arms_functional = [0, 0]
+        self.arms_moving = [0, 0]
 
         self.camera_extrinsics = np.eye(4)
         self.camera_intrinsics = np.array([
@@ -427,9 +432,14 @@ class HandObjectInteractionGraph:
 
             type_l = 'none'
             type_r = 'none'
-            hand_object_contacts = get_hand_object_contacts_annotation(human_video_annotation_path)[segment_idx]
-            type_l = 'close' if (hand_object_contacts['left']['contact_type'] == 'portable') else 'open'
-            type_r = 'close' if (hand_object_contacts['right']['contact_type'] == 'portable') else 'open'
+            # hand_object_contacts = get_hand_object_contacts_annotation(human_video_annotation_path)[segment_idx]
+            # type_l = 'close' if (hand_object_contacts['left']['contact_type'] == 'portable') else 'open'
+            # type_r = 'close' if (hand_object_contacts['right']['contact_type'] == 'portable') else 'open'
+            
+            all_arms_contact = get_hamer_hand_object_contacts_annotation(human_video_annotation_path)
+            self.arms_contact = all_arms_contact[segment_idx]
+            type_l = 'close' if (self.arms_contact[0] >= 0) else 'open'
+            type_r = 'close' if (self.arms_contact[1] >= 0) else 'open'
             self.hand_type = [type_l, type_r]
 
             # calculate grasp type
@@ -437,6 +447,18 @@ class HandObjectInteractionGraph:
 
             # identify main moving arm in this step
             self.identify_moving_arm(retargeter)
+
+            # identify arms type (functional or not, moving or not)
+            for arm_idx in range(2):
+                if self.arms_contact[arm_idx] >= 0:
+                    self.arms_functional[arm_idx] = 1
+                    # TODO: determine if hand moves
+                else:
+                    if segment_idx + 1 < len(all_arms_contact):
+                        if all_arms_contact[segment_idx + 1][arm_idx] >= 0:
+                            self.arms_functional[arm_idx] = 1
+                            self.arms_moving[arm_idx] = 1
+
     
     def identify_moving_arm(self, retargeter):
         L_targets = []

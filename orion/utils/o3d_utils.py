@@ -344,6 +344,8 @@ def load_reconstruction_info_from_human_demo(dataset_name, camera_name="front_ca
     with h5py.File(dataset_name, "r") as f:
         data_config = json.loads(f["data"].attrs["data_config"])
         print("data_config: ", data_config)
+        if camera_name not in data_config["intrinsics"].keys():
+            camera_name = "iphone"
         camera_intrinsics = data_config["intrinsics"][camera_name]
         camera_intrinsics_matrix = get_intrinsics_matrix_from_dict(camera_intrinsics)
         camera_extrinsics = data_config["extrinsics"][camera_name]

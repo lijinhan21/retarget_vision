@@ -225,20 +225,48 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
 
                 print("velocity of object", object_id, ":", v_mean, v_std)
 
-            lr = 0 if graph_in_query.moving_arm == "L" else 1
-            if len(candidate_objects_to_move) == 0:
-                if (graph_in_query.hand_type[lr] == 'open') or (graph_id == 0):
-                    graph_in_query.set_manipulate_object_id(-1)
-                else:
-                    print("No moving objects found. Will try to determine the object being manipulated using hand-object contacts.")
-                    self.vlm_get_manipulate_object(graph_id)
+            # The following are for single arm
+            # lr = 0 if graph_in_query.moving_arm == "L" else 1
+            # if len(candidate_objects_to_move) == 0:
+            #     if (graph_in_query.hand_type[lr] == 'open') or (graph_id == 0):
+            #         graph_in_query.set_manipulate_object_id(-1)
+            #     else:
+            #         print("No moving objects found. Will try to determine the object being manipulated using hand-object contacts.")
+            #         self.vlm_get_manipulate_object(graph_id)
+            # else:
+            #     if (len(candidate_objects_to_move) == 1) or (np.std(v_mean_list) < 0.1):
+            #         graph_in_query.set_manipulate_object_id(candidate_objects_to_move[0])
+            #     else:
+            #         # sort candidate objects to move by v_mean
+            #         candidate_objects_to_move = [x for _, x in sorted(zip(v_mean_list, candidate_objects_to_move))]
+            #         graph_in_query.set_manipulate_object_id(candidate_objects_to_move[-1])
+
+            # The following are general version that support bimanual tasks
+            # Query if there is any object in contact with hands
+            if graph_in_query.hand_type[0] == 'open' and graph_in_query.hand_type[1] == 'open':
+                print("both hands are not in contact with any object, so there is no manipulate object. Skip manipulate object selection.")
+                graph_in_query.set_manipulate_object_id(-1)
             else:
-                if (len(candidate_objects_to_move) == 1) or (np.std(v_mean_list) < 0.1):
-                    graph_in_query.set_manipulate_object_id(candidate_objects_to_move[0])
+                # There should be a manipulate object, as there exists an object in contact with hands
+                if len(candidate_objects_to_move) == 0:
+                    print("No moving objects found, even though there should be a manipulate object. Will try to determine the object being manipulated using vlm.")
+                    self.vlm_get_manipulate_object(graph_id)
                 else:
-                    # sort candidate objects to move by v_mean
-                    candidate_objects_to_move = [x for _, x in sorted(zip(v_mean_list, candidate_objects_to_move))]
-                    graph_in_query.set_manipulate_object_id(candidate_objects_to_move[-1])
+                    if (len(candidate_objects_to_move) == 1) or (np.std(v_mean_list) < 0.1):
+                        graph_in_query.set_manipulate_object_id(candidate_objects_to_move[0])
+                    else:
+                        # sort candidate objects to move by v_mean
+                        candidate_objects_to_move = [x for _, x in sorted(zip(v_mean_list, candidate_objects_to_move))]
+                        graph_in_query.set_manipulate_object_id(candidate_objects_to_move[-1])
+
+            # Determine the moving arm here
+            for arm_idx in range(2):
+                if graph_in_query.hand_type[arm_idx] == 'open':
+                    continue
+                manipulate_object_id = graph_in_query.get_manipulate_object_id()
+                # The hand in contact with the manipulate object(moving object) is moving
+                if graph_in_query.arms_contact[arm_idx] == manipulate_object_id:
+                    graph_in_query.arms_moving[arm_idx] = 1
 
             # Get point clouds for all objects
             pcd_list = []
@@ -306,14 +334,26 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
                             temp_contact_state.remove(manipulate_object_id)
                             current_graph.set_reference_object_id(temp_contact_state[0])
                             break
+
+                if current_graph.get_reference_object_id() < 0:
+                    print("cannot determine reference object based on contacts, but there are likely to have at most one since there exists manipulate object. Trying to call gpt4v")
+                    self.vlm_get_reference_object(graph_id)
             else:
                 # This is free motion. Then reference object is the next frame's manipulate object
-                current_graph.set_reference_object_id(next_graph.get_manipulate_object_id())
+                
+                # For single arm case:
+                # current_graph.set_reference_object_id(next_graph.get_manipulate_object_id())
 
-            if current_graph.get_reference_object_id() < 0:
-                print("cannot determine reference object based on contacts. trying to call gpt4v")
-                if current_graph.get_manipulate_object_id() > 0:
-                    self.vlm_get_reference_object(graph_id)
+                # Extend to general bimanual case:
+                next_graph_contacts = next_graph.arms_contact
+                grasped_objects = []
+                for arm_idx in range(2):
+                    if next_graph_contacts[arm_idx] > 0:
+                        grasped_objects.append(next_graph_contacts[arm_idx])
+                if len(grasped_objects) > 0:
+                    current_graph.set_reference_object_id(grasped_objects)
+                else:
+                    current_graph.set_reference_object_id(-1)
 
             print("reference object id", current_graph.get_reference_object_id())
 
