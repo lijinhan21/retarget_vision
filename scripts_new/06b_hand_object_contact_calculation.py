@@ -62,7 +62,7 @@ def determine_hand_object_contact_3d(img, depth, hand_masks, obj_masks, num_objs
         for j in range(num_objs):
             dists = hand_pcds[i].compute_point_cloud_distance(obj_pcds[j])
             intersections = [d for d in dists if d < 0.05]
-            if len(intersections) > 600:
+            if len(intersections) > 800:
                 contacts[i] = j
                 break
     print("contacts =", contacts)

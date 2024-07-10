@@ -78,6 +78,13 @@ def main():
     ]
     command = " ".join(commands)
     os.system(command)
+    
+    # copy smplh file into annotation folder
+    if args.no_smplh == False:
+        if args.smplh_path is not None:
+            smplh_path = os.path.join('datasets/smplh', args.smplh_path)
+            os.system(f'''cp {smplh_path} {os.path.join(annotation_path, "smplh_traj.pkl")}''')
+            print("copy smplh file into the annotation folder", smplh_path)
 
     exit(0)
 

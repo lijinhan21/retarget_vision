@@ -98,10 +98,14 @@ python scripts_new/create_hdf5_from_rgb.py --filepath PATH_TO_VIDEO_RELATIVE_TO_
 Then run pipeline to do temporal segmentation.
 ```
 python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-depth --no-smplh
+# Change to hamer's conda environment
+python scripts_new/process_hands.py --annotation-folder PATH_TO_ANNOTATION_FOLDER --no-depth
 ```
 If you have access to smplh model, put it under `datasets/smplh`, run
 ```
 MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-depth --smplh-path PATH_TO_SMPLH_RELATIVE_TO_datasets/smplh
+# Change to hamer's conda environment
+python scripts_new/process_hands.py --annotation-folder PATH_TO_ANNOTATION_FOLDER --no-depth
 ```
 
 All generated results are in `annotation\human_demo` folder.
@@ -113,10 +117,14 @@ Assume that you already convert rgbd video into a hdf5 file. Put the hdf5 file u
 If you have smplh file, put it under `datasets/smplh`, and run 
 ```
 MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --smplh-path PATH_TO_SMPLH_RELATIVE_TO_datasets/smplh
+# Change to hamer's conda environment
+python scripts_new/process_hands.py --annotation-folder PATH_TO_ANNOTATION_FOLDER
 ``` 
 If you do not have smplh file, run
 ```
 MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-smplh
+# Change to hamer's conda environment
+python scripts_new/process_hands.py --annotation-folder PATH_TO_ANNOTATION_FOLDER
 ```
 
 ### Details

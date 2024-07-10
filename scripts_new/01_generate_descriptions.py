@@ -101,6 +101,8 @@ def main():
         if 'canister' in text_description['objects']:
             text_description['objects'].remove('canister')
             text_description['objects'].append('bottle')
+        if 'table' in text_description['objects']:
+            text_description['objects'].remove('table')
         json.dump(text_description, f)
 
     # remove the folder

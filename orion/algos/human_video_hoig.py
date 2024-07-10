@@ -491,6 +491,7 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
         return len(self.hoigs)
     
     def get_all_segments_info(self):
+        # TODO: update info
         segments = []
         for idx, segment in enumerate(self.temporal_segments.segments):
             segments.append(convert_to_json_serializable({
