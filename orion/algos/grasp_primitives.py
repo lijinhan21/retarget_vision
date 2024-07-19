@@ -76,7 +76,7 @@ class GraspPrimitive:
 
         if type == 'none' or type == 'open':
             return nearest_neightbor(data, joint_angles + self.offset, euclidean_distance)
-        print("index angles", joint_angles[2])
+        # print("index angles", joint_angles[2])
         if joint_angles[2] < 40 / 180 * np.pi:
             return (self.get_joint_angles('palm'), 'palm')
         return nearest_neightbor(data, joint_angles + self.offset, index_pinky_distance)

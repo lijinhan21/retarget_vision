@@ -140,6 +140,8 @@ class HandObjectInteractionGraph:
         self.representative_images = []
         self.target_translation_btw_objects = np.array([])
 
+        self.segment_type = None
+
     def get_representative_images(self, num_images=5):
         img_idx = np.linspace(self.segment_start_idx, self.segment_end_idx, num_images, dtype=int)
         video_seq = get_video_seq_from_annotation(self.human_video_annotation_path)
@@ -215,6 +217,12 @@ class HandObjectInteractionGraph:
 
     def get_reference_object_id(self):
         return self.reference_object_id
+    
+    def set_segment_type(self, segment_type):
+        self.segment_type = segment_type
+
+    def get_segment_type(self):
+        return self.segment_type
 
     def load_depth(self, input_depth):
         self.input_depth = np.squeeze(np.ascontiguousarray(input_depth))
@@ -539,7 +547,7 @@ class HandObjectInteractionGraph:
         self.grasp_type = [hand_primitive_l[1], hand_primitive_r[1]]
         print("grasp type=", self.grasp_type)
 
-    def get_representative_images(self, num_images=5):
+    def get_representative_images(self, num_images=10):
         img_idx = np.linspace(self.segment_start_idx, self.segment_end_idx, num_images, dtype=int)
         video_seq = get_video_seq_from_annotation(self.human_video_annotation_path)
         img_lst = [video_seq[idx] for idx in img_idx]

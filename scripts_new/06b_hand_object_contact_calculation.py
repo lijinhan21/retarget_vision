@@ -66,6 +66,18 @@ def determine_hand_object_contact_3d(img, depth, hand_masks, obj_masks, num_objs
                 contacts[i] = j
                 break
     print("contacts =", contacts)
+
+    if contacts[0] > -1:
+        print("left hand center translation with relative to object center:")
+        left_hand_center = np.mean(np.array(hand_pcds[0].points), axis=0)
+        obj_center = np.mean(np.array(obj_pcds[contacts[0]].points), axis=0)
+        print(left_hand_center - obj_center)
+    if contacts[1] > -1:
+        print("right hand center translation with relative to object center:")
+        right_hand_center = np.mean(np.array(hand_pcds[1].points), axis=0)
+        obj_center = np.mean(np.array(obj_pcds[contacts[1]].points), axis=0)
+        print(right_hand_center - obj_center)
+
     return contacts
 
 def determine_hand_object_contact_2d(img, hand_masks, obj_masks, num_objs):
