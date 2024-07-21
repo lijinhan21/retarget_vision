@@ -37,8 +37,6 @@ def main():
     command = " ".join(commands)
     os.system(command)
 
-    
-
     # 3. cutie segmentation
     print("*************Cutie Segmentation*************")
     commands = [

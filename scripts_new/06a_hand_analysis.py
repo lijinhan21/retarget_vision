@@ -1,7 +1,9 @@
+import os
+os.environ['PYOPENGL_PLATFORM'] = 'osmesa'
+
 from pathlib import Path
 import torch
 import argparse
-import os
 import cv2
 import numpy as np
 
@@ -16,7 +18,6 @@ from orion.utils.misc_utils import *
 from orion.algos.tap_segmentation import TAPSegmentation
 
 LIGHT_BLUE=(0.65098039,  0.74117647,  0.85882353)
-os.environ['PYOPENGL_PLATFORM'] = 'osmesa'
 
 from vitpose_model import ViTPoseModel
 

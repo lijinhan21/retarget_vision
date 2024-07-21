@@ -119,12 +119,16 @@ If you have smplh file, put it under `datasets/smplh`, and run
 MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --smplh-path PATH_TO_SMPLH_RELATIVE_TO_datasets/smplh
 # Change to hamer's conda environment
 python scripts_new/process_hands.py --annotation-folder PATH_TO_ANNOTATION_FOLDER
+# Change back to original conda environment
+MUJOCO_GL="glx" python scripts_new/07_generate_hoig.py --annotation-folder PATH_TO_ANNOTATION_FOLDER
 ``` 
 If you do not have smplh file, run
 ```
 MUJOCO_GL="glx" python scripts_new/pipeline.py --human-demo PATH_TO_HDF5_RELATIVE_TO_datasets/iphones --no-smplh
 # Change to hamer's conda environment
 python scripts_new/process_hands.py --annotation-folder PATH_TO_ANNOTATION_FOLDER
+# Change back to original conda environment
+MUJOCO_GL="glx" python scripts_new/07_generate_hoig.py --annotation-folder PATH_TO_ANNOTATION_FOLDER --no-smplh
 ```
 
 ### Details
