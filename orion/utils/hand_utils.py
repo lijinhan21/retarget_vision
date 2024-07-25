@@ -168,3 +168,27 @@ def get_index_dip_points(vit_pose_detections,
         """
         index_dip_points = get_finger_joint_points(vit_pose_detections, 7, depth, intrinsics_matrix, extrinsics_matrix)
         return index_dip_points
+
+def get_estimate_palm_point(vit_pose_detections, 
+                            depth, 
+                            intrinsics_matrix, 
+                            extrinsics_matrix):
+    """_summary_
+
+    Args:
+        vit_pose_detections (_type_): _description_
+        depth (depth map): HxW depth map
+        intrinsics_matrix (numpy.ndarray): 3x3 intrinsics matrix
+        extrinsics_matrix (numpy.ndarray): 4x4 extrinsics matrix
+
+    Returns:
+        _type_: _description_
+    """
+    index_MCP = get_finger_joint_points(vit_pose_detections, 5, depth, intrinsics_matrix, extrinsics_matrix)
+    middle_MCP = get_finger_joint_points(vit_pose_detections, 9, depth, intrinsics_matrix, extrinsics_matrix)
+    ring_MCP = get_finger_joint_points(vit_pose_detections, 13, depth, intrinsics_matrix, extrinsics_matrix)
+    pinky_MCP = get_finger_joint_points(vit_pose_detections, 17, depth, intrinsics_matrix, extrinsics_matrix)
+
+    palm_point = np.mean(np.concatenate((index_MCP, middle_MCP, ring_MCP, pinky_MCP), axis=0), axis=0)
+    print("palm_point: ", palm_point)
+    return palm_point

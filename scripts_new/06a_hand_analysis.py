@@ -108,6 +108,7 @@ def main():
     # img_paths = [img for end in args.file_type for img in Path(args.img_folder).glob(end)]
 
     final_res = []
+    vitpose_res = []
     
     # Iterate over all images in folder
     # for img_path in img_paths:
@@ -137,6 +138,8 @@ def main():
         bboxes = []
         is_right = []
 
+        vitpose_detections = []
+
         # Use hands based on hand keypoint detections
         for vitposes in vitposes_out:
             left_hand_keyp = vitposes['keypoints'][-42:-21]
@@ -155,6 +158,8 @@ def main():
                 bbox = [keyp[valid,0].min(), keyp[valid,1].min(), keyp[valid,0].max(), keyp[valid,1].max()]
                 bboxes.append(bbox)
                 is_right.append(1)
+
+        vitpose_detections.append([left_hand_keyp, right_hand_keyp])
 
         if len(bboxes) == 0:
             continue
@@ -284,6 +289,8 @@ def main():
         cur_res_np = np.stack([cur_res_np_l, cur_res_np_r], axis=0)
         print("shape of cur_res_np is: ", cur_res_np.shape)
         final_res.append(cur_res_np)
+        vitpose_res.append(vitpose_detections)
+        # print('vit_pose_detections:', vitpose_detections)
 
         # with open(args.out_folder +f'/res{img_idx}.json', 'w') as f:
         #     ujson.dump(cur_res, f)
@@ -291,6 +298,7 @@ def main():
 
     print("Done! Generating final results...")
     np.savez(os.path.join(args.annotation_folder, 'hamer', 'hand_masks.npz'), np.stack(final_res, axis=0))
+    np.savez(os.path.join(args.annotation_folder, 'hamer', 'vitpose_res.npz'), np.stack(vitpose_res, axis=0))
     # final_res = []
     # for i in range(len(video_seq)):
     #     with open(args.out_folder +f'/res{i}.json', 'r') as f:

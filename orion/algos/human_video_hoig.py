@@ -69,6 +69,20 @@ class HumanVideoHOIG:
                                          use_smplh=use_smplh)
             self.hoigs.append(hoig)
             estimated_extrinsics = hoig.camera_extrinsics
+        
+        self.last_frame = HandObjectInteractionGraph()
+        self.last_frame.create_from_human_video(human_video_annotation_path,
+                                                self.temporal_segments.segments[-1].end_idx-1,
+                                                self.temporal_segments.segments[-1].end_idx,
+                                                segment_idx=len(self.temporal_segments.segments),
+                                                extrinsics=estimated_extrinsics,
+                                                retargeter=retargeter,
+                                                grasp_dict_l=grasp_dict_l,
+                                                grasp_dict_r=grasp_dict_r,
+                                                calibrate_grasp=False,
+                                                zero_pose_name=zero_pose_name,
+                                                video_smplh_ratio=video_smplh_ratio,
+                                                use_smplh=use_smplh)
 
         # get reference object and manipulate object names
         self.get_object_id_to_name()
@@ -195,17 +209,29 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
         text_prompt_list = [text_description]
         base64_img_list = [[vlm.preprocess_image(img, is_rgb=True, encoding='jpg') for img in current_graph.representative_images]]
 
-        text_response = vlm.run(text_prompt_list, base64_img_list)
-        json_data = json_parser(text_response)
+        for try_idx in range(5):
+            try:
+                text_response = vlm.run(text_prompt_list, base64_img_list)
+                json_data = json_parser(text_response)
+                break
+            except Exception as e:
+                print("error", e)
+                print("retrying...")
+                json_data = {'reference_object_name': 'None'}
+                continue
 
         if json_data['reference_object_name'] == 'None':
             current_graph.set_reference_object_id(-1)
         else:
             for object_id, object_name in self.object_id_to_name.items():
                 if object_name == json_data['reference_object_name']:
-                    current_graph.set_reference_object_id(object_id)
+                    if object_name == manipulate_object_name:
+                        current_graph.set_reference_object_id(-1)
+                    else:
+                        current_graph.set_reference_object_id(object_id)
                     break
         print("reference object id", current_graph.get_reference_object_id(), 'name', json_data['reference_object_name'])
+        print()
 
     def vlm_get_manipulate_object(self, graph_id):
         current_graph = self.get_graph(graph_id)
@@ -258,7 +284,7 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
             # determine segment type
             segment_type = self.heuristic_get_segment_type(graph_id)
             graph_in_query.set_segment_type(segment_type)
-            print("segment_type=", segment_type)
+            print("segment_type=", segment_type, graph_in_query.arms_contact)
             print()
 
             # the object with the highest velocity is selected as the object to manipulate
@@ -313,48 +339,6 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
             else:
                 # release step
                 graph_in_query.set_manipulate_object_id([-1])
-
-            # The following are for single arm
-            # lr = 0 if graph_in_query.moving_arm == "L" else 1
-            # if len(candidate_objects_to_move) == 0:
-            #     if (graph_in_query.hand_type[lr] == 'open') or (graph_id == 0):
-            #         graph_in_query.set_manipulate_object_id(-1)
-            #     else:
-            #         print("No moving objects found. Will try to determine the object being manipulated using hand-object contacts.")
-            #         self.vlm_get_manipulate_object(graph_id)
-            # else:
-            #     if (len(candidate_objects_to_move) == 1) or (np.std(v_mean_list) < 0.1):
-            #         graph_in_query.set_manipulate_object_id(candidate_objects_to_move[0])
-            #     else:
-            #         # sort candidate objects to move by v_mean
-            #         candidate_objects_to_move = [x for _, x in sorted(zip(v_mean_list, candidate_objects_to_move))]
-            #         graph_in_query.set_manipulate_object_id(candidate_objects_to_move[-1])
-
-            # The following are general version that support bimanual tasks
-            # Query if there is any object in contact with hands
-            # if graph_in_query.hand_type[0] == 'open' and graph_in_query.hand_type[1] == 'open':
-            #     print("both hands are not in contact with any object, so there is no manipulate object. Skip manipulate object selection.")
-            #     graph_in_query.set_manipulate_object_id(-1)
-            # else:
-            #     # There should be a manipulate object, as there exists an object in contact with hands
-            #     if len(candidate_objects_to_move) == 0:
-            #         print("No moving objects found, even though there should be a manipulate object. Will try to determine the object being manipulated using vlm.")
-            #         self.vlm_get_manipulate_object(graph_id)
-            #     else:
-            #         if (len(candidate_objects_to_move) == 1) or (np.std(v_mean_list) < 0.1):
-            #             graph_in_query.set_manipulate_object_id(candidate_objects_to_move[0])
-            #         else:
-            #             # sort candidate objects to move by v_mean
-            #             candidate_objects_to_move = [x for _, x in sorted(zip(v_mean_list, candidate_objects_to_move))]
-            #             graph_in_query.set_manipulate_object_id(candidate_objects_to_move[-1])
-            # # Determine the moving arm here
-            # for arm_idx in range(2):
-            #     if graph_in_query.hand_type[arm_idx] == 'open':
-            #         continue
-            #     manipulate_object_id = graph_in_query.get_manipulate_object_id()
-            #     # The hand in contact with the manipulate object(moving object) is moving
-            #     if graph_in_query.arms_contact[arm_idx] == manipulate_object_id:
-            #         graph_in_query.arms_moving[arm_idx] = 1
 
             # Get point clouds for all objects
             pcd_list = []
@@ -416,7 +400,7 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
                 assert(current_graph.get_manipulate_object_id()[0] > 0)
 
                 if graph_id < self.num_graphs - 1:
-                    print(f"graph_id={graph_id}, num_graphs={self.num_graphs}")
+                    # print(f"graph_id={graph_id}, num_graphs={self.num_graphs}")
                     next_graph = self.get_graph(graph_id + 1)
                     contact_states = next_graph.contact_states
                     manipulate_object_id = current_graph.get_manipulate_object_id()[0]
@@ -429,47 +413,15 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
                             temp_contact_state = list(contact_state)
                             temp_contact_state.remove(manipulate_object_id)
                             current_graph.set_reference_object_id(temp_contact_state[0])
-                            print("set reference object id", temp_contact_state[0])
+                            # print("set reference object id", temp_contact_state[0])
                             break
                 
                 if current_graph.get_reference_object_id() < 0:
                     print("cannot determine reference object based on contacts, but there are likely to have at most one since there exists manipulate object. Trying to call vlm")
                     self.vlm_get_reference_object(graph_id)
 
-            # if current_graph.get_manipulate_object_id() > 0:
-            #     contact_states = next_graph.contact_states
-            #     manipulate_object_id = current_graph.get_manipulate_object_id()
-
-            #     if len(contact_states) > 0:
-            #         for contact_state in contact_states:
-            #             if manipulate_object_id in contact_state:
-            #                 temp_contact_state = list(contact_state)
-            #                 temp_contact_state.remove(manipulate_object_id)
-            #                 current_graph.set_reference_object_id(temp_contact_state[0])
-            #                 break
-
-            #     if current_graph.get_reference_object_id() < 0:
-            #         print("cannot determine reference object based on contacts, but there are likely to have at most one since there exists manipulate object. Trying to call gpt4v")
-            #         self.vlm_get_reference_object(graph_id)
-            # else:
-            #     # This is free motion. Then reference object is the next frame's manipulate object
-                
-            #     # For single arm case:
-            #     # current_graph.set_reference_object_id(next_graph.get_manipulate_object_id())
-
-            #     # Extend to general bimanual case:
-            #     next_graph_contacts = next_graph.arms_contact
-            #     grasped_objects = []
-            #     for arm_idx in range(2):
-            #         if next_graph_contacts[arm_idx] > 0:
-            #             grasped_objects.append(next_graph_contacts[arm_idx])
-            #     if len(grasped_objects) > 0:
-            #         current_graph.set_reference_object_id(grasped_objects)
-            #     else:
-            #         current_graph.set_reference_object_id(-1)
-
             print()
-            print("for step", graph_id, "type:", current_graph.get_segment_type())
+            print("for step", graph_id, "type:", current_graph.get_segment_type(), "contact:", current_graph.arms_contact)
             print("manipulate object id", current_graph.get_manipulate_object_id())
             print("reference object id", current_graph.get_reference_object_id())
             print()
@@ -478,6 +430,50 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
             cv2.imwrite(os.path.join(self.human_video_annotation_path, "objects", f"reference_object_{graph_id}.png"), rgb_img)
 
             # TODO: calculate needed translation for each segment
+
+            if current_graph.get_segment_type() == 'manipulation':
+                # obtain the translation between manipulate object and reference object
+                if current_graph.get_manipulate_object_id()[0] > 0 and current_graph.get_reference_object_id() > 0:
+                    
+                    if graph_id + 1 < self.num_graphs:
+                        next_graph = self.get_graph(graph_id + 1)
+                    else:
+                        next_graph = self.last_frame
+
+                    mani_id = current_graph.get_manipulate_object_id()[0]
+                    ref_id = current_graph.get_reference_object_id()
+
+                    pcd_manipulate, _ = next_graph.get_objects_3d_points(object_id=mani_id, filter=False, downsample=False)
+                    pcd_reference, _ = next_graph.get_objects_3d_points(object_id=ref_id, filter=False, downsample=False)
+
+                    manipulate_center = np.mean(np.array(pcd_manipulate), axis=0)
+                    reference_center = np.mean(np.array(pcd_reference), axis=0)
+                    translation = manipulate_center - reference_center
+
+                    current_graph.target_translation_btw_objects = translation
+                    print("translation", translation)
+
+            elif current_graph.get_segment_type() == 'reach':
+                
+                next_graph = self.get_graph(graph_id + 1)
+                
+                for arm_idx in range(2):
+                    if next_graph.arms_contact[arm_idx] >= 0 and current_graph.arms_contact[arm_idx] < 0:
+                        mani_id = next_graph.arms_contact[arm_idx] + 1
+                        
+                        # obtain the translation between hand and object
+                        
+                        pcd_manipulate, _ = next_graph.get_objects_3d_points(object_id=mani_id, filter=False, downsample=False)
+                        object_center = np.mean(np.array(pcd_manipulate), axis=0)
+
+                        hand_center = next_graph.estimate_hand_interaction_center[arm_idx]
+                        palm = next_graph.estimate_palm_point[arm_idx]
+
+                        # translation = hand_center - object_center
+                        translation = palm - object_center
+                        
+                        current_graph.target_hand_object_translation[arm_idx] = translation
+                        print(f"arm{arm_idx} translation", translation)
 
             
             # if current_graph.get_manipulate_object_id() > 0 and current_graph.get_reference_object_id() > 0:
@@ -618,14 +614,14 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
                 'start_idx': segment.start_idx,
                 'end_idx': segment.end_idx,
                 'grasp_type': self.hoigs[idx].grasp_type,
-                'hand_type': self.hoigs[idx].hand_type,
                 'segment_type': self.hoigs[idx].segment_type,
                 'hand_contact': [(self.object_id_to_name[obj_id + 1] if obj_id >= 0 else "None")
                                   for obj_id in self.hoigs[idx].arms_contact],
                 'manipulate_object': [(self.object_id_to_name[obj_id] if obj_id > 0 else "None") 
                                        for obj_id in self.hoigs[idx].manipulate_object_id],
                 'reference_object': self.object_id_to_name[self.hoigs[idx].reference_object_id] if self.hoigs[idx].reference_object_id > 0 else "None",
-                'target_translation': self.hoigs[idx].target_translation_btw_objects.tolist(),
+                'target_object_translation': self.hoigs[idx].target_translation_btw_objects.tolist(),
+                'target_hand_object_translation': [t.tolist() for t in self.hoigs[idx].target_hand_object_translation],
                 # 'smplh_traj': convert_to_json_serializable(self.hoigs[idx].smplh_traj),
                 # 'objects': self.object_names
             }))

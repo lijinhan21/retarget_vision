@@ -21,6 +21,7 @@ def json_parser(txt):
             print("Extracted JSON data:", json_data)
         except:
             print("Error decoding JSON from vlm response.")
+            raise ValueError("Error decoding JSON from vlm response.")
     else:
         print("No JSON found in the text.")
     

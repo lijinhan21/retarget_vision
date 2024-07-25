@@ -38,6 +38,16 @@ from orion.utils.misc_utils import (
     transform_points,
     simple_filter_outliers,)
 
+from orion.utils.hand_utils import (
+    compute_thumb_index_joints,
+    get_finger_joint_points,
+    get_thumb_tip_points,
+    get_thumb_dip_points,
+    get_index_tip_points,
+    get_index_dip_points,
+    get_estimate_palm_point
+)
+
 from orion.utils.o3d_utils import (
     scene_pcd_fn, 
     O3DPointCloud, 
@@ -139,6 +149,7 @@ class HandObjectInteractionGraph:
 
         self.representative_images = []
         self.target_translation_btw_objects = np.array([])
+        self.target_hand_object_translation = [np.array([]), np.array([])]
 
         self.segment_type = None
 
@@ -426,6 +437,38 @@ class HandObjectInteractionGraph:
 
         # create human node
         self.human_node = HumanNode(video_smplh_ratio)
+
+        # hand keypoints
+        hand_kpts_file = os.path.join(human_video_annotation_path, 'hamer', "vitpose_res.npz")
+        vitpose_detections = np.load(hand_kpts_file)['arr_0']
+        vitpose_detections = vitpose_detections[segment_start_idx:segment_end_idx]
+        vitpose_detections = vitpose_detections.squeeze(1)
+        
+        # get the detection of first frame
+        vitpose_detections = vitpose_detections[0, :, :, :2]
+        # print("shape of vitpose_detections", vitpose_detections.shape)
+
+        self.thumb_tip_points = [
+            get_thumb_tip_points(vitpose_detections[0], depth_seg_seq[0], self.camera_intrinsics, self.camera_extrinsics),
+            get_thumb_tip_points(vitpose_detections[1], depth_seg_seq[0], self.camera_intrinsics, self.camera_extrinsics)
+        ]
+        self.index_tip_points = [
+            get_index_tip_points(vitpose_detections[0], depth_seg_seq[0], self.camera_intrinsics, self.camera_extrinsics),
+            get_index_tip_points(vitpose_detections[1], depth_seg_seq[0], self.camera_intrinsics, self.camera_extrinsics)
+        ]
+        self.estimate_thumb_point = [np.mean(self.thumb_tip_points[0], axis=0), np.mean(self.thumb_tip_points[1], axis=0)]
+        self.estimate_index_point = [np.mean(self.index_tip_points[0], axis=0), np.mean(self.index_tip_points[1], axis=0)]
+        self.estimate_hand_interaction_center = [
+            (self.estimate_thumb_point[0] + self.estimate_index_point[0]) / 2,
+            (self.estimate_thumb_point[1] + self.estimate_index_point[1]) / 2
+        ]
+        self.estimate_palm_point = [
+            get_estimate_palm_point(vitpose_detections[0], depth_seg_seq[0], self.camera_intrinsics, self.camera_extrinsics),
+            get_estimate_palm_point(vitpose_detections[1], depth_seg_seq[0], self.camera_intrinsics, self.camera_extrinsics)
+        ]
+        print("estimate_hand_interaction_center", self.estimate_hand_interaction_center)
+        print("estimate_palm_point", self.estimate_palm_point)
+
         if use_smplh:
             # load whole smplh traj, and parse out the needed part
             smplh_traj = get_smplh_traj_annotation(human_video_annotation_path)
@@ -445,27 +488,13 @@ class HandObjectInteractionGraph:
             # type_r = 'close' if (hand_object_contacts['right']['contact_type'] == 'portable') else 'open'
             
             all_arms_contact = get_hamer_hand_object_contacts_annotation(human_video_annotation_path)
-            self.arms_contact = all_arms_contact[segment_idx]
+            self.arms_contact = all_arms_contact[segment_idx] if segment_idx < len(all_arms_contact) else all_arms_contact[-1]
             type_l = 'close' if (self.arms_contact[0] >= 0) else 'open'
             type_r = 'close' if (self.arms_contact[1] >= 0) else 'open'
             self.hand_type = [type_l, type_r]
 
             # calculate grasp type
             self.get_grasp_type(grasp_dict_l, grasp_dict_r, type_l, type_r, calibrate_grasp, zero_pose_name, retargeter)
-
-            # identify main moving arm in this step
-            self.identify_moving_arm(retargeter)
-
-            # identify arms type (functional or not, moving or not)
-            for arm_idx in range(2):
-                if self.arms_contact[arm_idx] >= 0:
-                    self.arms_functional[arm_idx] = 1
-                    # TODO: determine if hand moves
-                else:
-                    if segment_idx + 1 < len(all_arms_contact):
-                        if all_arms_contact[segment_idx + 1][arm_idx] >= 0:
-                            self.arms_functional[arm_idx] = 1
-                            self.arms_moving[arm_idx] = 1
 
     
     def identify_moving_arm(self, retargeter):
