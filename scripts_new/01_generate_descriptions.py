@@ -95,6 +95,8 @@ def main():
     with open(os.path.join(annotation_path, "text_description.json"), "w") as f:
         vlm = GPT4V()
         text_description = identify_objects(vlm, img_paths)
+
+        # adjust object name to let G-SAM understand
         if 'can' in text_description['objects']:
             text_description['objects'].remove('can')
             text_description['objects'].append('bottle')

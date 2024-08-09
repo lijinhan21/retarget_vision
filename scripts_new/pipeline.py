@@ -15,27 +15,35 @@ def main():
     annotation_folder = f"annotations/{mode}"
     annotation_path = os.path.join(annotation_folder, args.human_demo.split("/")[-1].split(".")[0])
 
-    # 1. generate text description
-    print("*************Text Description*************")
-    commands = [
-        "python",
-        "scripts_new/01_generate_descriptions.py",
-        "--human_demo",
-        args.human_demo,
-    ]
-    command = " ".join(commands)                                    
-    os.system(command)
+    ret = input('Generate text using vlm? (y/n): ')
+    if ret == 'y':
+        # 1. generate text description
+        print("*************Text Description*************")
+        commands = [
+            "python",
+            "scripts_new/01_generate_descriptions.py",
+            "--human_demo",
+            args.human_demo,
+        ]
+        command = " ".join(commands)                                    
+        os.system(command)
 
-    # 2. gam annotation
-    print("*************GAM Annotation*************")
-    commands = [
-        "python",
-        "scripts_new/02_gam_annotation.py",
-        "--human_demo",
-        args.human_demo,
-    ]
-    command = " ".join(commands)
-    os.system(command)
+    ret = input('\nRun GAM Annotation? (y/n): ')
+    if ret == 'y':
+        # 2. gam annotation
+        print("*************GAM Annotation*************")
+        commands = [
+            "python",
+            "scripts_new/02_gam_annotation.py",
+            "--human_demo",
+            args.human_demo,
+        ]
+        command = " ".join(commands)
+        os.system(command)
+
+    ret = input('\nproceed? (y/n): ')
+    if ret != 'y':
+        exit(0)
 
     # 3. cutie segmentation
     print("*************Cutie Segmentation*************")
@@ -58,6 +66,7 @@ def main():
         "--num-track-points",
         "40",
         "--no-depth" if args.no_depth else "",
+        "--no-video"
     ]
     if not args.save_video:
         commands.append("--no-video")

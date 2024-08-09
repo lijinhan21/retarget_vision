@@ -149,6 +149,9 @@ You should output the name of the object in a string "OBJECT_NAME" that can be e
                 if current_graph.arms_contact[arm_idx] != next_graph.arms_contact[arm_idx]: # Note: this circumstance most likely won't happen
                     return 'reach'
         
+        if current_graph.arms_contact[0] == -1 and current_graph.arms_contact[1] == -1:
+            return 'release'
+        
         return 'manipulation'
 
 
@@ -193,9 +196,9 @@ Ensure that the type you output is either 'reach' or 'manipulate', do not output
         vlm = GPT4V()
         vlm.begin_new_dialog()
         text_description = f'''The following images shows a manipulation motion, where the human is manipulating the object {manipulate_object_name}.
-Please identify the reference object in the image below, which could be an object on which to place {manipulate_object_name}, or an object with {manipulate_object_name} is interacting with.
+Please identify the reference object in the image below, which could be an object on which to place {manipulate_object_name}, or an object which {manipulate_object_name} is interacting with.
 Note that there may not necessarily have an reference object, as sometimes human may just interacting with the object itself, like throwing it, or spinning it around.
-You need to first identify is there is a reference object. If so, you need to output the reference object's name chosen from the following objects: {self.object_names}.''' + '''
+You need to first identify if there is a reference object. If there is no reference object, you should output 'None'. If there exists a reference object, you need to output the reference object's name chosen from the following objects: {self.object_names}.''' + '''
 Your output format is:
 
 ```json
@@ -429,7 +432,7 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
             rgb_img = current_graph.get_objects_2d_image(current_graph.get_reference_object_id())
             cv2.imwrite(os.path.join(self.human_video_annotation_path, "objects", f"reference_object_{graph_id}.png"), rgb_img)
 
-            # TODO: calculate needed translation for each segment
+            # calculate needed translation for each segment
 
             if current_graph.get_segment_type() == 'manipulation':
                 # obtain the translation between manipulate object and reference object
@@ -489,13 +492,18 @@ Ensure the response can be parsed by Python `json.loads`, e.g.: no trailing comm
             #     current_graph.target_translation_btw_objects = translation
             #     print("translation", translation)
 
-        # decide reference objects for the last graph
-        last_graph = self.get_graph(self.num_graphs - 1)
-        last_graph.set_reference_object_id(-1)
-        # print("reference object id", last_graph.get_reference_object_id())
-
-        rgb_img = last_graph.get_objects_2d_image(last_graph.get_reference_object_id())
-        cv2.imwrite(os.path.join(self.human_video_annotation_path, "objects", f"reference_object_{self.num_graphs-1}.png"), rgb_img)
+        # check all graphs and see if things are feasible: the manipulate object should be in contact with the hand, if not, then the segment should be categorized as 'release'
+        for graph_id in range(self.num_graphs):
+            current_graph = self.get_graph(graph_id)
+            if current_graph.get_segment_type() == 'manipulation':
+                if current_graph.get_manipulate_object_id()[0] > 0:
+                    manipulate_object_id = current_graph.get_manipulate_object_id()[0]
+                    if current_graph.arms_contact[0] + 1 != manipulate_object_id and \
+                        current_graph.arms_contact[1] + 1 != manipulate_object_id:
+                        current_graph.set_segment_type('release')
+                        current_graph.set_manipulate_object_id([-1])
+                        current_graph.set_reference_object_id(-1)
+                        current_graph.target_translation_btw_objects = np.array([])
 
         return
         if not self.check_graph_contact_equal(self.num_graphs-2, self.num_graphs-1):

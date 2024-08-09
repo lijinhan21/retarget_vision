@@ -18,7 +18,7 @@ from orion.utils.o3d_utils import (
     transform_point_clouds,
     filter_pcd)
 
-def get_3d_points(input_image, depth, mask, filter=True, remove_outlier_kwargs={"nb_neighbors": 40, "std_ratio": 0.7}, downsample=True):
+def get_3d_points(input_image, depth, mask, filter=False, remove_outlier_kwargs={"nb_neighbors": 80, "std_ratio": 1}, downsample=True):
     # if object_id is None:
     #     masked_depth = self.input_depth * (self.input_annotation > 0).astype(np.float32)
     # else:
@@ -32,10 +32,14 @@ def get_3d_points(input_image, depth, mask, filter=True, remove_outlier_kwargs={
         extrinsic_matrix=camera_extrinsics,
         intrinsic_matrix=camera_intrinsics,
         downsample=downsample,
+        depth_trunc=10.0,
     )
+    # print("number of pcd points =", len(pcd_points))
     if filter:
         pcd_points, pcd_colors = remove_outlier(pcd_points, pcd_colors,
                                                 **remove_outlier_kwargs)
+    if len(pcd_points) == 0:
+        input('warning: len of pcd points after filtering is 0')
     return pcd_points, pcd_colors
 
 def determine_hand_object_contact_3d(img, depth, hand_masks, obj_masks, num_objs):
@@ -48,18 +52,27 @@ def determine_hand_object_contact_3d(img, depth, hand_masks, obj_masks, num_objs
     """
     obj_pcds = []
     for i in range(num_objs):
-        pcd_array, _ = get_3d_points(img, depth, obj_masks == i+1)
-        pcd = create_o3d_from_points_and_color(pcd_array)
-        obj_pcds.append(pcd)
+        try:
+            pcd_array, _ = get_3d_points(img, depth, obj_masks == i+1)
+            pcd = create_o3d_from_points_and_color(pcd_array)
+            obj_pcds.append(pcd)
+        except:
+            obj_pcds.append(None)
     hand_pcds = []
     for i in range(2):
-        pcd_array, _ = get_3d_points(img, depth, hand_masks[i, :, :, 0])
-        pcd = create_o3d_from_points_and_color(pcd_array)
-        hand_pcds.append(pcd)
+        try:
+            pcd_array, _ = get_3d_points(img, depth, hand_masks[i, :, :, 0])
+            pcd = create_o3d_from_points_and_color(pcd_array)
+            hand_pcds.append(pcd)
+        except:
+            hand_pcds.append(None)
     
     contacts = [-1, -1]
     for i in range(2):
         for j in range(num_objs):
+            if hand_pcds[i] is None or obj_pcds[j] is None:
+                continue
+
             dists = hand_pcds[i].compute_point_cloud_distance(obj_pcds[j])
             intersections = [d for d in dists if d < 0.05]
             if len(intersections) > 800:
@@ -157,8 +170,8 @@ def main():
         all_vel = []
 
         # sample several keyframes from each segment
-        keyframe_indices = np.linspace(seg.start_idx, seg.end_idx, 25).astype(int)
-        keyframe_indices = keyframe_indices[3:22]
+        keyframe_indices = np.linspace(seg.start_idx, seg.end_idx, 35).astype(int)
+        keyframe_indices = keyframe_indices[3:32]
         for i in range(len(keyframe_indices)):
             # check hand-object relationship in this frame
             img = video_seq[keyframe_indices[i]]
@@ -249,7 +262,11 @@ def main():
             if max_contact_v == max_contact_n:
                 max_contact = max_contact_v
             else:
-                if max_num > 11:
+                if contact_mean_v[max_contact_v] - contact_mean_v[max_contact_n] > 0.4:
+                    max_contact = max_contact_v
+                elif contact_num[max_contact_v] < 8:
+                    max_contact = max_contact_n
+                elif max_num > 19:
                     max_contact = max_contact_n
                 else:
                     max_contact = max_contact_v
